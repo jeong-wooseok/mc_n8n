@@ -24,6 +24,8 @@ cd mc_n8n
 
 # 2. 도커컴포즈 실행
 docker compose --profile gpu-nvidia up -d --build
+# gpu없는 경우는
+# docker compose up -d --build
 ```
 
 ### 2단계: 서비스 접속
