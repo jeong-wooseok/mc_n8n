@@ -1,0 +1,260 @@
+{
+  "name": "⚠️ 중요 이메일 처리 워크플로우",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "workflow-trigger",
+      "name": "워크플로우 트리거",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 중요 이메일 데이터 포맷팅\nconst data = $input.item(0).json;\n\nconst importantEmailData = {\n  email_info: {\n    from: data.from,\n    subject: data.subject,\n    summary: data.summary,\n    urgency_score: data.urgency_score,\n    suggested_action: data.suggested_action,\n    timestamp: data.timestamp,\n    messageId: data.messageId\n  },\n  slack_message: {\n    text: `⚠️ *중요 이메일 알림*`,\n    blocks: [\n      {\n        \"type\": \"header\",\n        \"text\": {\n          \"type\": \"plain_text\",\n          \"text\": \"⚠️ 중요 이메일 알림\"\n        }\n      },\n      {\n        \"type\": \"section\",\n        \"fields\": [\n          {\n            \"type\": \"mrkdwn\",\n            \"text\": `*발신자:*\\n${data.from}`\n          },\n          {\n            \"type\": \"mrkdwn\",\n            \"text\": `*중요도:*\\n${'🟡'.repeat(data.urgency_score)} (${data.urgency_score}/5)`\n          }\n        ]\n      },\n      {\n        \"type\": \"section\",\n        \"text\": {\n          \"type\": \"mrkdwn\",\n          \"text\": `*제목:* ${data.subject}\\n*요약:* ${data.summary}\\n*권장 조치:* ${data.suggested_action}`\n        }\n      },\n      {\n        \"type\": \"actions\",\n        \"elements\": [\n          {\n            \"type\": \"button\",\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"Gmail에서 확인\"\n            },\n            \"url\": `https://mail.google.com/mail/u/0/#inbox/${data.messageId}`,\n            \"style\": \"primary\"\n          },\n          {\n            \"type\": \"button\",\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"처리 완료\"\n            },\n            \"value\": data.messageId,\n            \"action_id\": \"mark_done\"\n          }\n        ]\n      }\n    ]\n  },\n  notion_task: {\n    parent: {\n      database_id: \"{{ $vars.NOTION_TASKS_DATABASE_ID }}\"\n    },\n    properties: {\n      \"제목\": {\n        title: [\n          {\n            text: {\n              content: `이메일 처리: ${data.subject}`\n            }\n          }\n        ]\n      },\n      \"발신자\": {\n        rich_text: [\n          {\n            text: {\n              content: data.from\n            }\n          }\n        ]\n      },\n      \"요약\": {\n        rich_text: [\n          {\n            text: {\n              content: data.summary\n            }\n          }\n        ]\n      },\n      \"우선순위\": {\n        select: {\n          name: data.urgency_score >= 4 ? \"높음\" : \"보통\"\n        }\n      },\n      \"상태\": {\n        select: {\n          name: \"대기 중\"\n        }\n      },\n      \"마감일\": {\n        date: {\n          start: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 내일\n        }\n      }\n    }\n  },\n  reminder_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24시간 후\n};\n\nreturn [{ json: importantEmailData }];"
+      },
+      "id": "data-formatter",
+      "name": "중요 데이터 포맷팅",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C2345678901",
+          "mode": "list",
+          "cachedResultName": "#important-emails"
+        },
+        "text": "={{ $json.slack_message.text }}",
+        "blocksUi": {
+          "blocksValues": [
+            {
+              "block": "={{ JSON.stringify($json.slack_message.blocks) }}"
+            }
+          ]
+        },
+        "otherOptions": {
+          "mrkdwn": true
+        }
+      },
+      "id": "slack-notification",
+      "name": "Slack 알림",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [680, 200],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "slack_credentials",
+          "name": "Slack OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "{{ $vars.NOTION_TASKS_DATABASE_ID }}",
+          "mode": "list"
+        },
+        "title": "이메일 처리: {{ $json.email_info.subject }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "발신자",
+              "textValue": "={{ $json.email_info.from }}"
+            },
+            {
+              "key": "요약",
+              "textValue": "={{ $json.email_info.summary }}"
+            },
+            {
+              "key": "우선순위",
+              "selectValue": "={{ $json.email_info.urgency_score >= 4 ? '높음' : '보통' }}"
+            },
+            {
+              "key": "상태",
+              "selectValue": "대기 중"
+            },
+            {
+              "key": "마감일",
+              "dateValue": "={{ $json.reminder_time.split('T')[0] }}"
+            }
+          ]
+        }
+      },
+      "id": "notion-task",
+      "name": "Notion 태스크 생성",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "credentials": {
+        "notionApi": {
+          "id": "notion_credentials",
+          "name": "Notion API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.email_info.messageId }}",
+        "labelIds": ["Label_2345678901"]
+      },
+      "id": "gmail-label",
+      "name": "Gmail 중요 라벨",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [680, 400],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail_credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "unit": "hours",
+        "amount": 24
+      },
+      "id": "wait-24hours",
+      "name": "24시간 대기",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 24시간 후 리마인더 메시지 생성\nconst data = $input.item(0).json;\n\nconst reminderData = {\n  reminder_message: {\n    text: `🕐 *이메일 처리 리마인더*`,\n    blocks: [\n      {\n        \"type\": \"header\",\n        \"text\": {\n          \"type\": \"plain_text\",\n          \"text\": \"🕐 이메일 처리 리마인더\"\n        }\n      },\n      {\n        \"type\": \"section\",\n        \"text\": {\n          \"type\": \"mrkdwn\",\n          \"text\": `24시간 전에 받은 중요 이메일이 아직 처리되지 않았습니다.\\n\\n*발신자:* ${data.email_info.from}\\n*제목:* ${data.email_info.subject}\\n*요약:* ${data.email_info.summary}`\n        }\n      },\n      {\n        \"type\": \"actions\",\n        \"elements\": [\n          {\n            \"type\": \"button\",\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"지금 처리하기\"\n            },\n            \"url\": `https://mail.google.com/mail/u/0/#inbox/${data.email_info.messageId}`,\n            \"style\": \"primary\"\n          },\n          {\n            \"type\": \"button\",\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"내일 다시 알림\"\n            },\n            \"value\": \"snooze_24h\",\n            \"action_id\": \"snooze_reminder\"\n          }\n        ]\n      }\n    ]\n  }\n};\n\nreturn [{ json: { ...data, ...reminderData } }];"
+      },
+      "id": "reminder-formatter",
+      "name": "리마인더 포맷팅",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C2345678901",
+          "mode": "list",
+          "cachedResultName": "#important-emails"
+        },
+        "text": "={{ $json.reminder_message.text }}",
+        "blocksUi": {
+          "blocksValues": [
+            {
+              "block": "={{ JSON.stringify($json.reminder_message.blocks) }}"
+            }
+          ]
+        },
+        "otherOptions": {
+          "mrkdwn": true
+        }
+      },
+      "id": "slack-reminder",
+      "name": "Slack 리마인더",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [1340, 300],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "slack_credentials",
+          "name": "Slack OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "워크플로우 트리거": {
+      "main": [
+        [
+          {
+            "node": "중요 데이터 포맷팅",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "중요 데이터 포맷팅": {
+      "main": [
+        [
+          {
+            "node": "Slack 알림",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notion 태스크 생성",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gmail 중요 라벨",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion 태스크 생성": {
+      "main": [
+        [
+          {
+            "node": "24시간 대기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "24시간 대기": {
+      "main": [
+        [
+          {
+            "node": "리마인더 포맷팅",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "리마인더 포맷팅": {
+      "main": [
+        [
+          {
+            "node": "Slack 리마인더",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2024-12-19T10:00:00.000Z",
+      "updatedAt": "2024-12-19T10:00:00.000Z",
+      "id": "email-automation",
+      "name": "이메일 자동화"
+    }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2024-12-19T10:00:00.000Z",
+  "versionId": "1"
+} 

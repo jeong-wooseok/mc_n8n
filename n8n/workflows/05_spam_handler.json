@@ -1,0 +1,291 @@
+{
+  "name": "🗑️ 스팸 이메일 처리 워크플로우",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "workflow-trigger",
+      "name": "워크플로우 트리거",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 스팸 이메일 분석 및 위험도 평가\nconst data = $input.item(0).json;\n\n// 피싱 의심 키워드\nconst phishingKeywords = [\n  '긴급', '즉시', '계정 정지', '계정 확인', '클릭하세요', 'verify account',\n  '비밀번호 변경', '로그인 링크', '당첨', '무료', '상금', '이벤트 당첨',\n  '개인정보', '카드번호', '계좌번호', '보안코드', 'credit card'\n];\n\n// 의심스러운 도메인 패턴\nconst suspiciousDomains = [\n  'temp-mail', 'guerrillamail', '10minutemail', 'mailinator',\n  'gmai1.com', 'gmial.com', 'outlok.com' // 타이포스쿼팅\n];\n\n// 스팸 점수 계산\nfunction calculateSpamScore(emailData) {\n  let score = 0;\n  const emailText = `${emailData.subject} ${emailData.body}`.toLowerCase();\n  \n  // 피싱 키워드 체크\n  const matchedPhishingWords = phishingKeywords.filter(keyword => \n    emailText.includes(keyword.toLowerCase())\n  );\n  score += matchedPhishingWords.length * 10;\n  \n  // 의심스러운 도메인 체크\n  const senderDomain = emailData.from.split('@')[1]?.toLowerCase() || '';\n  const isDomainSuspicious = suspiciousDomains.some(domain => \n    senderDomain.includes(domain)\n  );\n  if (isDomainSuspicious) score += 20;\n  \n  // 제목에 과도한 특수문자 사용\n  const specialCharCount = (emailData.subject.match(/[!@#$%^&*()]/g) || []).length;\n  if (specialCharCount > 3) score += 15;\n  \n  // 본문에 URL이 많은 경우\n  const urlCount = (emailData.body.match(/https?:\\/\\//g) || []).length;\n  if (urlCount > 5) score += 10;\n  \n  return {\n    total_score: score,\n    phishing_keywords: matchedPhishingWords,\n    suspicious_domain: isDomainSuspicious,\n    special_chars: specialCharCount,\n    url_count: urlCount\n  };\n}\n\nconst spamAnalysis = calculateSpamScore(data);\nconst riskLevel = spamAnalysis.total_score >= 30 ? 'high' : \n                 spamAnalysis.total_score >= 15 ? 'medium' : 'low';\n\nconst spamData = {\n  email_info: {\n    from: data.from,\n    subject: data.subject,\n    summary: data.summary,\n    timestamp: data.timestamp,\n    messageId: data.messageId\n  },\n  spam_analysis: {\n    ...spamAnalysis,\n    risk_level: riskLevel,\n    is_phishing_suspected: spamAnalysis.total_score >= 30\n  },\n  security_alert: {\n    alert_type: 'spam_detection',\n    severity: riskLevel,\n    details: {\n      sender: data.from,\n      subject: data.subject,\n      phishing_indicators: spamAnalysis.phishing_keywords,\n      risk_score: spamAnalysis.total_score\n    }\n  }\n};\n\nreturn [{ json: spamData }];"
+      },
+      "id": "spam-analyzer",
+      "name": "스팸 분석",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "messageId": "={{ $json.email_info.messageId }}"
+      },
+      "id": "gmail-delete",
+      "name": "Gmail 이메일 삭제",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [680, 200],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail_credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "createFilter",
+        "criteria": {
+          "from": "={{ $json.email_info.from }}"
+        },
+        "action": {
+          "addLabelIds": ["SPAM"],
+          "removeLabelIds": ["INBOX"]
+        }
+      },
+      "id": "gmail-filter",
+      "name": "Gmail 필터 생성",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail_credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "phishing-suspected",
+              "leftValue": "={{ $json.spam_analysis.is_phishing_suspected }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "phishing-check",
+      "name": "피싱 의심 체크",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "url": "{{ $vars.SECURITY_TEAM_WEBHOOK }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.security_alert }}",
+        "options": {}
+      },
+      "id": "security-alert",
+      "name": "보안팀 알림",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C5678901234",
+          "mode": "list",
+          "cachedResultName": "#security-alerts"
+        },
+        "text": "🚨 *피싱 의심 이메일 탐지* 🚨",
+        "blocksUi": {
+          "blocksValues": [
+            {
+              "block": "={{ JSON.stringify([\n                {\n                  \"type\": \"header\",\n                  \"text\": {\n                    \"type\": \"plain_text\",\n                    \"text\": \"🚨 피싱 의심 이메일 탐지\"\n                  }\n                },\n                {\n                  \"type\": \"section\",\n                  \"fields\": [\n                    {\n                      \"type\": \"mrkdwn\",\n                      \"text\": `*발신자:*\\n${$json.email_info.from}`\n                    },\n                    {\n                      \"type\": \"mrkdwn\",\n                      \"text\": `*위험도:*\\n${$json.spam_analysis.risk_level.toUpperCase()}`\n                    }\n                  ]\n                },\n                {\n                  \"type\": \"section\",\n                  \"text\": {\n                    \"type\": \"mrkdwn\",\n                    \"text\": `*제목:* ${$json.email_info.subject}\\n*스팸 점수:* ${$json.spam_analysis.total_score}/100\\n*피싱 키워드:* ${$json.spam_analysis.phishing_keywords.join(', ')}`\n                  }\n                },\n                {\n                  \"type\": \"actions\",\n                  \"elements\": [\n                    {\n                      \"type\": \"button\",\n                      \"text\": {\n                        \"type\": \"plain_text\",\n                        \"text\": \"상세 조사\"\n                      },\n                      \"style\": \"danger\",\n                      \"value\": $json.email_info.messageId\n                    }\n                  ]\n                }\n              ]) }}"
+            }
+          ]
+        },
+        "otherOptions": {
+          "mrkdwn": true
+        }
+      },
+      "id": "slack-phishing-alert",
+      "name": "Slack 피싱 알림",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [1120, 300],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "slack_credentials",
+          "name": "Slack OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "spam_log",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "values": {
+            "timestamp": "={{ $json.email_info.timestamp }}",
+            "sender": "={{ $json.email_info.from }}",
+            "subject": "={{ $json.email_info.subject }}",
+            "spam_score": "={{ $json.spam_analysis.total_score }}",
+            "risk_level": "={{ $json.spam_analysis.risk_level }}",
+            "phishing_keywords": "={{ $json.spam_analysis.phishing_keywords.join(', ') }}",
+            "action_taken": "deleted_and_blocked"
+          }
+        }
+      },
+      "id": "database-log",
+      "name": "데이터베이스 로깅",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 400],
+      "credentials": {
+        "postgres": {
+          "id": "postgres_credentials",
+          "name": "PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 스팸 패턴 학습 데이터 생성\nconst data = $input.item(0).json;\n\n// 기계학습을 위한 특성 추출\nconst features = {\n  sender_domain: data.email_info.from.split('@')[1]?.toLowerCase(),\n  subject_length: data.email_info.subject.length,\n  special_char_ratio: data.spam_analysis.special_chars / data.email_info.subject.length,\n  url_count: data.spam_analysis.url_count,\n  phishing_keyword_count: data.spam_analysis.phishing_keywords.length,\n  has_suspicious_domain: data.spam_analysis.suspicious_domain,\n  spam_score: data.spam_analysis.total_score,\n  risk_level: data.spam_analysis.risk_level,\n  is_spam: true // 스팸으로 분류된 것이므로 true\n};\n\n// 학습 데이터 형식으로 변환\nconst trainingData = {\n  input_features: features,\n  label: 'spam',\n  confidence: data.spam_analysis.total_score / 100,\n  timestamp: data.email_info.timestamp\n};\n\nreturn [{ json: trainingData }];"
+      },
+      "id": "learning-data",
+      "name": "학습 데이터 생성",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 500]
+    },
+    {
+      "parameters": {
+        "url": "{{ $vars.ML_TRAINING_API_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "ml-api",
+      "name": "ML 모델 업데이트",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 500]
+    }
+  ],
+  "connections": {
+    "워크플로우 트리거": {
+      "main": [
+        [
+          {
+            "node": "스팸 분석",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "스팸 분석": {
+      "main": [
+        [
+          {
+            "node": "Gmail 이메일 삭제",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gmail 필터 생성",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "데이터베이스 로깅",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail 필터 생성": {
+      "main": [
+        [
+          {
+            "node": "피싱 의심 체크",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "피싱 의심 체크": {
+      "main": [
+        [
+          {
+            "node": "보안팀 알림",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Slack 피싱 알림",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "데이터베이스 로깅": {
+      "main": [
+        [
+          {
+            "node": "학습 데이터 생성",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "학습 데이터 생성": {
+      "main": [
+        [
+          {
+            "node": "ML 모델 업데이트",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2024-12-19T10:00:00.000Z",
+      "updatedAt": "2024-12-19T10:00:00.000Z",
+      "id": "email-automation",
+      "name": "이메일 자동화"
+    }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2024-12-19T10:00:00.000Z",
+  "versionId": "1"
+} 

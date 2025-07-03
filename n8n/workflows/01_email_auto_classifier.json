@@ -1,0 +1,315 @@
+{
+  "name": "📧 이메일 자동분류봇 - 메인 워크플로우",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "receivedEmail",
+        "options": {
+          "includeAttachments": false
+        }
+      },
+      "id": "gmail-trigger",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail_credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 이메일 데이터 전처리\nconst emailData = {\n  from: $input.item(0).json.from,\n  subject: $input.item(0).json.subject || '',\n  body: $input.item(0).json.textPlain || $input.item(0).json.textHtml || ''\n};\n\n// 본문 텍스트 정리 (HTML 태그 제거, 길이 제한)\nif (emailData.body) {\n  emailData.body = emailData.body\n    .replace(/<[^>]*>/g, '') // HTML 태그 제거\n    .replace(/\\s+/g, ' ')    // 여러 공백을 하나로\n    .substring(0, 1000);     // 1000자로 제한\n}\n\nreturn [{ json: emailData }];"
+      },
+      "id": "data-preprocessing",
+      "name": "데이터 전처리",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "options": {},
+        "systemPromptTemplate": "### 역할 (Persona) ###\n당신은 n8n 워크플로우 내에서 작동하는 'AI 이메일 분류 에이전트'입니다. 당신의 임무는 이전 노드(Gmail Trigger)로부터 받은 이메일 데이터를 분석하고, 후속 자동화 단계를 위해 구조화된 JSON 데이터를 생성하는 것입니다. 당신의 응답은 다른 노드의 입력값으로 직접 사용되므로, 반드시 지정된 출력 형식을 정확히 준수해야 합니다.\n\n### 지시사항 (Instruction) ###\nn8n 워크플로우의 일부로서, 당신은 다음 단계를 순서대로 수행해야 합니다:\n1. 입력으로 제공된 이메일 데이터(from, subject, body)를 종합적으로 분석합니다.\n2. 이메일의 내용을 파악하여 아래에 정의된 '분류 카테고리' 중 가장 적합한 하나로 분류합니다.\n3. 이메일의 핵심 내용을 한 문장으로 간결하게 요약합니다.\n4. 이메일의 긴급도를 1(정보성, 낮음)부터 5(즉시 처리 필요, 매우 높음)까지의 정수로 평가합니다.\n5. 사용자의 구체적인 응답이나 행동이 필요한지 여부를 'true' 또는 'false'로 판단합니다.\n6. 위 분석 결과를 **오직 하나의 JSON 객체 형식으로만 응답**하십시오. 다른 설명, 인사, 추가 텍스트는 절대 포함해서는 안 됩니다.\n\n### 분류 카테고리 (Classification Categories) ###\n- **urgent:** 즉각적인 확인과 조치가 필요한 이메일 (예: 서버 장애 알림, 긴급 회의 요청, 고객의 긴급 클레임).\n- **important:** 빠른 시일 내에 확인하고 응답해야 하는 업무 관련 이메일 (예: 주간 보고 요청, 일반 업무 협의, 미팅 팔로업).\n- **promotional:** 뉴스레터, 광고, 마케팅, 이벤트 정보 등 정보성 또는 광고성 메일.\n- **personal:** 친구, 가족, 지인과의 사적인 대화.\n- **notification:** 서비스 가입, 결제, 배송 등 시스템에서 자동으로 발송하는 정보성 알림.\n- **spam:** 불필요한 광고, 피싱 시도 등 사용자가 원치 않는 이메일.\n\n### 출력 형식 (Output Format) ###\n반드시 다음의 JSON 구조를 사용하여 응답하십시오:\n{\n  \"category\": \"분류 카테고리 (위 6가지 영문 소문자 키 중 하나)\",\n  \"summary\": \"이메일 핵심 내용 한 문장 요약\",\n  \"urgency_score\": \"긴급도 점수 (1에서 5 사이의 정수)\",\n  \"requires_action\": \"응답 또는 행동 필요 여부 (boolean: true 또는 false)\",\n  \"suggested_action\": \"사용자를 위한 추천 행동 (예: '즉시 회신 필요', '오늘 중으로 검토', '정보 확인 후 보관')\"\n}",
+        "userPromptTemplate": "분석할 이메일 데이터:\n\n발신자: {{ $json.from }}\n제목: {{ $json.subject }}\n본문: {{ $json.body }}\n\n위 이메일을 분석하여 JSON 형식으로 분류 결과를 반환해주세요."
+      },
+      "id": "ai-classifier",
+      "name": "AI 이메일 분류기",
+      "type": "n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1,
+      "position": [680, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai_credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// AI 응답을 JSON으로 파싱\ntry {\n  const aiResponse = $input.item(0).json.text || $input.item(0).json.response;\n  const classificationResult = JSON.parse(aiResponse);\n  \n  // 원본 이메일 데이터와 분류 결과 합치기\n  const originalEmail = $node['데이터 전처리'].json;\n  \n  return [{\n    json: {\n      ...originalEmail,\n      ...classificationResult,\n      timestamp: new Date().toISOString(),\n      messageId: $node['Gmail Trigger'].json.id\n    }\n  }];\n} catch (error) {\n  // 파싱 실패 시 기본값 설정\n  return [{\n    json: {\n      ...$node['데이터 전처리'].json,\n      category: 'unknown',\n      summary: 'AI 분류 실패',\n      urgency_score: 2,\n      requires_action: false,\n      suggested_action: '수동 검토 필요',\n      error: error.message,\n      timestamp: new Date().toISOString(),\n      messageId: $node['Gmail Trigger'].json.id\n    }\n  }];\n}"
+      },
+      "id": "result-parser",
+      "name": "결과 파싱",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "urgent-condition",
+              "leftValue": "={{ $json.category }}",
+              "rightValue": "urgent",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "important-condition", 
+              "leftValue": "={{ $json.category }}",
+              "rightValue": "important",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "promotional-condition",
+              "leftValue": "={{ $json.category }}",
+              "rightValue": "promotional", 
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "personal-condition",
+              "leftValue": "={{ $json.category }}",
+              "rightValue": "personal",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "notification-condition",
+              "leftValue": "={{ $json.category }}",
+              "rightValue": "notification",
+              "operator": {
+                "type": "string", 
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "spam-condition",
+              "leftValue": "={{ $json.category }}",
+              "rightValue": "spam",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "category-switch",
+      "name": "카테고리별 분기",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "workflowId": "{{ $vars.URGENT_WORKFLOW_ID }}",
+        "source": "parameter",
+        "options": {}
+      },
+      "id": "urgent-workflow",
+      "name": "🚨 긴급 처리",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1340, 120]
+    },
+    {
+      "parameters": {
+        "workflowId": "{{ $vars.IMPORTANT_WORKFLOW_ID }}",
+        "source": "parameter",
+        "options": {}
+      },
+      "id": "important-workflow", 
+      "name": "⚠️ 중요 처리",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "workflowId": "{{ $vars.PROMOTIONAL_WORKFLOW_ID }}",
+        "source": "parameter",
+        "options": {}
+      },
+      "id": "promotional-workflow",
+      "name": "📢 프로모션 처리", 
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1340, 280]
+    },
+    {
+      "parameters": {
+        "workflowId": "{{ $vars.PERSONAL_WORKFLOW_ID }}",
+        "source": "parameter",
+        "options": {}
+      },
+      "id": "personal-workflow",
+      "name": "👤 개인 처리",
+      "type": "n8n-nodes-base.executeWorkflow", 
+      "typeVersion": 1,
+      "position": [1340, 360]
+    },
+    {
+      "parameters": {
+        "workflowId": "{{ $vars.NOTIFICATION_WORKFLOW_ID }}",
+        "source": "parameter",
+        "options": {}
+      },
+      "id": "notification-workflow",
+      "name": "🔔 알림 처리",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1340, 440]
+    },
+    {
+      "parameters": {
+        "workflowId": "{{ $vars.SPAM_WORKFLOW_ID }}",
+        "source": "parameter", 
+        "options": {}
+      },
+      "id": "spam-workflow",
+      "name": "🗑️ 스팸 처리",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1340, 520]
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "데이터 전처리",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "데이터 전처리": {
+      "main": [
+        [
+          {
+            "node": "AI 이메일 분류기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI 이메일 분류기": {
+      "main": [
+        [
+          {
+            "node": "결과 파싱",
+            "type": "main", 
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "결과 파싱": {
+      "main": [
+        [
+          {
+            "node": "카테고리별 분기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "카테고리별 분기": {
+      "main": [
+        [
+          {
+            "node": "🚨 긴급 처리",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⚠️ 중요 처리",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📢 프로모션 처리",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "👤 개인 처리",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔔 알림 처리",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🗑️ 스팸 처리",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2024-12-19T10:00:00.000Z",
+      "updatedAt": "2024-12-19T10:00:00.000Z", 
+      "id": "email-automation",
+      "name": "이메일 자동화"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2024-12-19T10:00:00.000Z",
+  "versionId": "1"
+} 

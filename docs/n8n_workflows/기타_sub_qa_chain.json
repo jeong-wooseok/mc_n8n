@@ -1,0 +1,228 @@
+{
+  "name": "0_4_QA-chain",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "query"
+            }
+          ]
+        }
+      },
+      "id": "e4e14d61-1476-47e7-810a-b83bf5050919",
+      "typeVersion": 1.1,
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.query }}",
+        "options": {
+          "systemPromptTemplate": "You are a multilingual AI assistant specializing in document analysis and question answering. Your task is to use the provided context to answer questions in the same language they were asked, regardless of the language of the source documents.\n\nFollow these guidelines:\n\nCarefully analyze the given context to extract relevant information.\n\nIf the question is in a different language than the context (e.g., Korean question with English context), first understand the question’s intent.\n\nSearch for relevant information in the context, even if it’s in a different language.\n\nProvide a comprehensive answer based on the information found in the context.\n\nProvide your answer in the same language as the question was asked.\n\nIf the context contains information but you need to translate it to match the question language, do so accurately while preserving the original meaning.\n\nIf you cannot find relevant information in the context, acknowledge this limitation in your answer.\n\nNever invent information not present in the context.\n\nWhen answering in a language different from the context, ensure your translation maintains the original technical concepts and terminology.\n\nFor complex or technical topics, consider providing both the original terms and their translations for clarity.\n\nAfter each piece of information used in your answer, cite the source document using the format [Attach: Document Title, Page X] or [Document Title, Page X] if author information is not available.\n\nAt the end of your answer, include a “References” section listing all cited sources with:\n\nAuthor(s) name(s) when available\n\nDocument title\n\nPublication year if available\n\nPage numbers referenced in your answer\n\nUse the following pieces of context to answer the user’s question:\n\n{context}\n\nRemember: Always respond in the same language as the question, providing a complete and academic-style answer based solely on the information available in the context. Include academic-style citations for each piece of information and provide a proper references section at the end of your answer."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
+      "typeVersion": 1.5,
+      "position": [
+        220,
+        0
+      ],
+      "id": "d4c77815-dd16-413f-ba55-d7d41b638f9b",
+      "name": "Question and Answer Chain"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        120,
+        160
+      ],
+      "id": "f4696997-d7bb-4776-8e16-ea73d3048a7a",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "XsISmIe5jtIv9n2W",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.retrieverVectorStore",
+      "typeVersion": 1,
+      "position": [
+        340,
+        160
+      ],
+      "id": "f0aae1db-c639-4790-9af4-905bd740b502",
+      "name": "Vector Store Retriever"
+    },
+    {
+      "parameters": {
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "docs",
+          "mode": "list",
+          "cachedResultName": "docs"
+        },
+        "useReranker": true,
+        "options": {
+          "searchFilterJson": "{\n  \"should\": [\n    {\n      \"key\": \"metadata.batch\",\n      \"match\": {\n        \"value\": 12345\n      }\n    }\n  ]\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.1,
+      "position": [
+        260,
+        280
+      ],
+      "id": "2d5f92a8-0884-4c8e-9cdf-66b3936be469",
+      "name": "Qdrant Vector Store",
+      "credentials": {
+        "qdrantApi": {
+          "id": "CyDrZDezFdP8VadJ",
+          "name": "Qdrant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        200,
+        420
+      ],
+      "id": "8fe224e0-a47f-4a85-a335-5b664f49abfb",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "XsISmIe5jtIv9n2W",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.rerankerCohere",
+      "typeVersion": 1,
+      "position": [
+        420,
+        420
+      ],
+      "id": "a12b7277-d778-4b98-bb90-31b22faea0b8",
+      "name": "Reranker Cohere",
+      "credentials": {
+        "cohereApi": {
+          "id": "LDBJgBivquf6c5jz",
+          "name": "CohereApi account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Question and Answer Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Question and Answer Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Store Retriever": {
+      "ai_retriever": [
+        [
+          {
+            "node": "Question and Answer Chain",
+            "type": "ai_retriever",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Vector Store Retriever",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reranker Cohere": {
+      "ai_reranker": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_reranker",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "218078b8-93b4-4477-bd2f-9d547644d543",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f59c0de63285a64c131184e7bec79da05901447afbe86aac036ebf3df0ced53d"
+  },
+  "id": "P59oxsQ29mVPZ3m0",
+  "tags": [
+    {
+      "createdAt": "2025-06-06T04:29:31.778Z",
+      "updatedAt": "2025-06-06T04:29:31.778Z",
+      "id": "Q2cucN8JGHgqgLzH",
+      "name": "tw"
+    }
+  ]
+}

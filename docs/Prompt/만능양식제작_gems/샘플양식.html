@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주간보고 양식 도우미</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent-color: #2563eb; /* blue-600 */
+            --accent-color-light: #eff6ff; /* blue-100 */
+            --accent-color-start: #1a73e8; /* Classic Blue start */
+            --accent-color-end: #004d9a; /* Classic Blue end */
+            --header-bg-image: url('https://i.imgur.com/your-report-icon.png'); /* Placeholder, replace with actual icon */
+            --header-bg-position: right center;
+            --header-bg-size: contain;
+            --header-bg-opacity: 0.05;
+            --header-mix-blend-mode: multiply;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .gradient-header-bg {
+            background: linear-gradient(to right, var(--accent-color-start), var(--accent-color-end));
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            print-color-adjust: exact !important;
+            -webkit-print-color-adjust: exact !important;
+        }
+
+        .gradient-header-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: var(--header-bg-image);
+            background-repeat: no-repeat;
+            background-position: var(--header-bg-position);
+            background-size: var(--header-bg-size);
+            opacity: var(--header-bg-opacity);
+            mix-blend-mode: var(--header-mix-blend-mode);
+            pointer-events: none;
+            print-color-adjust: exact !important;
+            -webkit-print-color-adjust: exact !important;
+        }
+
+        .material-section {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid #e0e0e0; /* Add a light border for definition */
+            print-color-adjust: exact !important;
+            -webkit-print-color-adjust: exact !important;
+        }
+
+        .section-heading {
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            color: var(--accent-color);
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--accent-color-light);
+            display: flex;
+            align-items: center;
+        }
+
+        .section-heading i {
+            color: var(--accent-color);
+            margin-right: 10px;
+            print-color-adjust: exact !important;
+            -webkit-print-color-adjust: exact !important;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 700;
+            color: #4a4a4a;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="date"],
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            box-sizing: border-box;
+            -webkit-appearance: none; /* For consistent styling across browsers */
+            -moz-appearance: none;
+            appearance: none;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(var(--accent-color-start-rgb), 0.2); /* Dynamic shadow with rgba */
+        }
+        
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .accent-border {
+            border-left: 4px solid var(--accent-color);
+            padding-left: 15px;
+            margin-bottom: 15px;
+            font-style: italic;
+            color: #555;
+            background-color: var(--accent-color-light);
+            border-radius: 4px;
+            print-color-adjust: exact !important;
+            -webkit-print-color-adjust: exact !important;
+        }
+
+        .button-group button,
+        .button-group label {
+            padding: 10px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s, transform 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+        }
+
+        .button-group button i,
+        .button-group label i {
+            margin-right: 8px;
+        }
+
+        .button-primary {
+            background-color: var(--accent-color);
+            color: white;
+        }
+        .button-primary:hover {
+            background-color: var(--accent-color-end);
+            transform: translateY(-1px);
+        }
+
+        .button-secondary {
+            background-color: #6b7280; /* gray-500 */
+            color: white;
+        }
+        .button-secondary:hover {
+            background-color: #4b5563; /* gray-700 */
+            transform: translateY(-1px);
+        }
+
+        /* Document Output Styling */
+        .document-output {
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            min-height: 800px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e0e0e0;
+            line-height: 1.8;
+            word-break: break-word;
+            font-family: 'Times New Roman', serif; /* For official document feel */
+        }
+
+        .document-output h1, .document-output h2, .document-output h3, .document-output h4 {
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            color: #222;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+        .document-output h1 { font-size: 2.2rem; text-align: center; color: var(--accent-color); margin-bottom: 30px; }
+        .document-output h2 { font-size: 1.8rem; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 30px;}
+        .document-output h3 { font-size: 1.5rem; color: #444; margin-top: 20px;}
+        .document-output p { margin-bottom: 10px; }
+        .document-output ul { list-style-type: disc; margin-left: 20px; margin-bottom: 10px; }
+        .document-output ol { list-style-type: decimal; margin-left: 20px; margin-bottom: 10px; }
+        .document-output li { margin-bottom: 5px; }
+
+        .document-output .report-info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .document-output .report-info-table th,
+        .document-output .report-info-table td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        .document-output .report-info-table th {
+            background-color: var(--accent-color-light);
+            font-weight: bold;
+            color: #555;
+            width: 120px;
+        }
+
+        /* Print Specific Styles */
+        @media print {
+            body {
+                font-size: 11pt;
+                line-height: 1.5;
+                margin: 0;
+                padding: 0;
+                background-color: #fff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            .container {
+                width: 100%;
+                max-width: 100%;
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+            }
+            .gradient-header-bg {
+                background: linear-gradient(to right, var(--accent-color-start), var(--accent-color-end)) !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+                padding: 20px 30px !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .gradient-header-bg::before {
+                background-image: var(--header-bg-image) !important;
+                background-position: var(--header-bg-position) !important;
+                background-size: var(--header-bg-size) !important;
+                opacity: var(--header-bg-opacity) !important;
+                mix-blend-mode: normal !important; /* Ensure blend mode compatibility for print */
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .material-section {
+                box-shadow: 0 0 0 1px #e0e0e0 !important; /* Keep a thin border for sections */
+                border: 1px solid #e0e0e0 !important;
+                border-radius: 0 !important;
+                margin-bottom: 15px !important;
+                padding: 20px !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .section-heading {
+                border-bottom: 1px solid var(--accent-color-light) !important;
+                padding-bottom: 5px !important;
+                margin-top: 20px !important;
+                margin-bottom: 10px !important;
+                font-size: 1.3rem !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .section-heading i {
+                color: var(--accent-color) !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .accent-border {
+                border-left: 3px solid var(--accent-color) !important;
+                background-color: var(--accent-color-light) !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .document-output {
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+                min-height: auto !important;
+                font-family: 'Times New Roman', serif !important;
+                color: #000 !important;
+            }
+            .document-output h1 {
+                font-size: 2rem !important;
+                margin-bottom: 20px !important;
+            }
+            .document-output h2 {
+                font-size: 1.5rem !important;
+            }
+            .document-output p, .document-output li {
+                font-size: 11pt !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4">
+    <div class="container mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+        <div class="input-form-section no-print">
+            <div class="gradient-header-bg text-center mb-6">
+                <h1 class="text-3xl font-bold mb-2">주간보고 양식 도우미</h1>
+                <p class="text-lg opacity-90">효율적인 주간 업무 보고를 위한 양식을 작성하세요.</p>
+            </div>
+
+            <div class="material-section">
+                <h2 class="section-heading"><i class="fas fa-file-signature"></i>보고서 기본 정보</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="form-group">
+                        <label for="reportPeriod">보고 기간</label>
+                        <input type="text" id="reportPeriod" placeholder="예: 2025년 7월 첫째 주 (07.01 ~ 07.05)" class="border p-2 w-full rounded">
+                    </div>
+                    <div class="form-group">
+                        <label for="reporterName">작성자</label>
+                        <input type="text" id="reporterName" placeholder="예: 김민준 과장" class="border p-2 w-full rounded">
+                    </div>
+                    <div class="form-group">
+                        <label for="reportDate">작성일</label>
+                        <input type="date" id="reportDate" class="border p-2 w-full rounded">
+                    </div>
+                    <div class="form-group">
+                        <label for="teamName">소속 부서/팀</label>
+                        <input type="text" id="teamName" placeholder="예: 개발 1팀" class="border p-2 w-full rounded">
+                    </div>
+                </div>
+            </div>
+
+            <div class="material-section">
+                <h2 class="section-heading"><i class="fas fa-tasks"></i>주요 업무 성과</h2>
+                <div class="form-group">
+                    <label for="weeklyAchievements">금주 주요 업무 내용 및 성과 (구체적인 결과 포함)</label>
+                    <textarea id="weeklyAchievements" placeholder="예시:
+- [프로젝트명] 기능 구현 완료 (진행률 100%)
+- 주간 회의 자료 준비 및 발표 (피드백 반영 완료)
+- 신규 고객 미팅 진행 (긍정적인 반응, 다음 주 추가 논의 예정)" class="border p-2 w-full rounded"></textarea>
+                </div>
+            </div>
+
+            <div class="material-section">
+                <h2 class="section-heading"><i class="fas fa-clipboard-list"></i>다음 주 업무 계획</h2>
+                <div class="form-group">
+                    <label for="nextWeekPlans">다음 주 주요 업무 계획 및 목표</label>
+                    <textarea id="nextWeekPlans" placeholder="예시:
+- [프로젝트명] 테스트 및 버그 수정 (07.08 ~ 07.10)
+- 주간보고 자동화 방안 검토 (솔루션 리서치 및 보고서 초안 작성)
+- 팀원별 상반기 성과 평가 준비 지원" class="border p-2 w-full rounded"></textarea>
+                </div>
+            </div>
+
+            <div class="material-section">
+                <h2 class="section-heading"><i class="fas fa-exclamation-triangle"></i>특이사항 및 문제점</h2>
+                <div class="form-group">
+                    <label for="issuesAndNotes">업무 진행 중 발생한 특이사항, 문제점 및 해결 방안 (필요 시 지원 요청)</label>
+                    <textarea id="issuesAndNotes" placeholder="예시:
+- [프로젝트명] 기능 구현 시, 외부 API 연동 지연 발생 (관련 부서와 협의 중, 금주 내 해결 예상)
+- [업무명] 관련 자료 부족 (팀장님께 관련 자료 요청 예정)" class="border p-2 w-full rounded"></textarea>
+                </div>
+            </div>
+
+            <div class="material-section">
+                <h2 class="section-heading"><i class="fas fa-comment-dots"></i>기타 의견</h2>
+                <div class="form-group">
+                    <label for="otherComments">추가적으로 공유하고 싶은 내용</label>
+                    <textarea id="otherComments" placeholder="예시:
+- 다음 주부터 주 2회 재택근무 실시 예정입니다.
+- 효율적인 업무를 위한 [도구명] 도입을 건의합니다." class="border p-2 w-full rounded"></textarea>
+                </div>
+            </div>
+
+            <div class="material-section button-group flex flex-wrap gap-4 justify-center no-print">
+                <button type="button" onclick="clearForm()" class="button-secondary"><i class="fas fa-redo"></i>양식 초기화</button>
+                <button type="button" onclick="downloadDataFile()" class="button-primary"><i class="fas fa-download"></i>데이터 파일로 저장</button>
+                <label for="uploadFile" class="button-primary cursor-pointer"><i class="fas fa-upload"></i>데이터 파일 불러오기
+                    <input type="file" id="uploadFile" accept=".json" class="hidden" onchange="uploadDataFile(event)">
+                </label>
+            </div>
+        </div>
+
+        <div class="document-preview-section">
+            <div class="flex items-center justify-between mb-6 no-print">
+                <h2 class="text-2xl font-bold text-gray-800">
+                    <i class="fas fa-file-alt text-blue-600 mr-2"></i>
+                    생성된 주간보고 미리보기
+                </h2>
+                <button onclick="window.print()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition duration-300">
+                    <i class="fas fa-print mr-2"></i>
+                    PDF 저장
+                </button>
+            </div>
+            <div id="document-output" class="document-output">
+                <h1 class="text-center font-bold text-3xl mb-8 text-blue-700 print-color-adjust-exact">주간 업무 보고</h1>
+                <p class="text-center text-gray-600 mb-6">효율적인 주간 업무 공유 및 성과 관리를 위한 보고서입니다.</p>
+
+                <div class="material-section mb-6 print-color-adjust-exact">
+                    <h3 class="section-heading"><i class="fas fa-info-circle"></i>보고서 개요</h3>
+                    <table class="report-info-table">
+                        <tr><th>보고 기간</th><td id="outputReportPeriod"></td></tr>
+                        <tr><th>작 성 자</th><td id="outputReporterName"></td></tr>
+                        <tr><th>작 성 일</th><td id="outputReportDate"></td></tr>
+                        <tr><th>소속 부서/팀</th><td id="outputTeamName"></td></tr>
+                    </table>
+                </div>
+
+                <div class="material-section mb-6 print-color-adjust-exact">
+                    <h3 class="section-heading"><i class="fas fa-award"></i>금주 주요 업무 성과</h3>
+                    <div id="outputWeeklyAchievements" class="whitespace-pre-wrap"></div>
+                </div>
+
+                <div class="material-section mb-6 print-color-adjust-exact">
+                    <h3 class="section-heading"><i class="fas fa-calendar-alt"></i>다음 주 업무 계획</h3>
+                    <div id="outputNextWeekPlans" class="whitespace-pre-wrap"></div>
+                </div>
+
+                <div class="material-section mb-6 print-color-adjust-exact">
+                    <h3 class="section-heading"><i class="fas fa-lightbulb"></i>특이사항 및 문제점</h3>
+                    <div id="outputIssuesAndNotes" class="whitespace-pre-wrap"></div>
+                </div>
+
+                <div class="material-section mb-6 print-color-adjust-exact">
+                    <h3 class="section-heading"><i class="fas fa-comment"></i>기타 의견</h3>
+                    <div id="outputOtherComments" class="whitespace-pre-wrap"></div>
+                </div>
+
+                <div class="accent-border print-only mt-8 text-sm">
+                    <p>본 보고서는 <span id="currentYear"></span>년 <span id="currentMonth"></span>월 <span id="currentDay"></span>일 기준으로 작성되었습니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const documentTitle = '주간보고'; // 양식명 정의
+        const formInputs = [
+            'reportPeriod', 'reporterName', 'reportDate', 'teamName',
+            'weeklyAchievements', 'nextWeekPlans', 'issuesAndNotes', 'otherComments'
+        ];
+
+        // 테마 색상 및 배경 이미지 동적 설정
+        function setDynamicTheme() {
+            let themeColor = '#2563eb'; // blue-600
+            let themeColorLight = '#eff6ff'; // blue-100
+            let themeColorStart = '#1a73e8'; // Classic Blue start
+            let themeColorEnd = '#004d9a'; // Classic Blue end
+            let headerBgImage = `url('https://i.imgur.com/bWcQf9O.png')`; // Report icon (example)
+            let headerBgPosition = 'right 15px';
+            let headerBgSize = 'auto 80%';
+            let headerBgOpacity = '0.08';
+            let headerMixBlendMode = 'multiply';
+
+            // Based on documentTitle, you can customize these further
+            // For '주간보고', sticking with a professional blue theme.
+
+            document.documentElement.style.setProperty('--accent-color', themeColor);
+            document.documentElement.style.setProperty('--accent-color-light', themeColorLight);
+            document.documentElement.style.setProperty('--accent-color-start', themeColorStart);
+            document.documentElement.style.setProperty('--accent-color-end', themeColorEnd);
+            document.documentElement.style.setProperty('--header-bg-image', headerBgImage);
+            document.documentElement.style.setProperty('--header-bg-position', headerBgPosition);
+            document.documentElement.style.setProperty('--header-bg-size', headerBgSize);
+            document.documentElement.style.setProperty('--header-bg-opacity', headerBgOpacity);
+            document.documentElement.style.setProperty('--header-mix-blend-mode', headerMixBlendMode);
+
+            // Update accent colors in print media query for header
+            const styleSheet = document.styleSheets[0];
+            if (styleSheet) {
+                let printRules = `@media print {
+                    .gradient-header-bg {
+                        background: linear-gradient(to right, ${themeColorStart}, ${themeColorEnd}) !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    .gradient-header-bg::before {
+                        background-image: ${headerBgImage} !important;
+                        background-position: ${headerBgPosition} !important;
+                        background-size: ${headerBgSize} !important;
+                        opacity: ${headerBgOpacity} !important;
+                        mix-blend-mode: normal !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    .section-heading i, .accent-border {
+                        color: ${themeColor} !important;
+                        border-left-color: ${themeColor} !important;
+                        background-color: ${themeColorLight} !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    .document-output h1 {
+                        color: ${themeColor} !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                }`;
+                styleSheet.insertRule(printRules, styleSheet.cssRules.length);
+            }
+        }
+
+        // 로컬 저장소에 양식 데이터 저장
+        function saveFormDataToLocalStorage() {
+            const formData = {};
+            formInputs.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    formData[id] = element.value;
+                }
+            });
+            localStorage.setItem(`form_${documentTitle}`, JSON.stringify(formData));
+        }
+
+        // 로컬 저장소에서 양식 데이터 불러오기
+        function loadFormDataFromLocalStorage() {
+            const savedData = localStorage.getItem(`form_${documentTitle}`);
+            if (savedData) {
+                const formData = JSON.parse(savedData);
+                formInputs.forEach(id => {
+                    const element = document.getElementById(id);
+                    if (element && formData[id] !== undefined) {
+                        element.value = formData[id];
+                    }
+                });
+            }
+        }
+
+        // 양식 필드 초기화
+        function clearForm() {
+            if (confirm('정말로 양식을 초기화하시겠습니까? 모든 내용이 삭제됩니다.')) {
+                formInputs.forEach(id => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.value = '';
+                    }
+                });
+                localStorage.removeItem(`form_${documentTitle}`);
+                generateDocument(); // 미리보기 업데이트
+            }
+        }
+
+        // 데이터 파일 다운로드
+        function downloadDataFile() {
+            const formData = {};
+            formInputs.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    formData[id] = element.value;
+                }
+            });
+            const dataStr = JSON.stringify(formData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
+            a.download = `${documentTitle}_${dateStr}.json`;
+            a.href = url;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // 데이터 파일 업로드
+        function uploadDataFile(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const formData = JSON.parse(e.target.result);
+                    formInputs.forEach(id => {
+                        const element = document.getElementById(id);
+                        if (element && formData[id] !== undefined) {
+                            element.value = formData[id];
+                        }
+                    });
+                    saveFormDataToLocalStorage(); // 업로드된 데이터도 로컬 저장소에 저장
+                    generateDocument(); // 미리보기 업데이트
+                    alert('데이터를 성공적으로 불러왔습니다.');
+                } catch (error) {
+                    alert('파일을 읽는 중 오류가 발생했습니다. 유효한 JSON 파일인지 확인해주세요.');
+                    console.error('Error reading file:', error);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // 같은 파일 재업로드 가능하게 input 초기화
+        }
+
+        // Tab 키로 Placeholder 내용 적용
+        function setupInputPlaceholders() {
+            formInputs.forEach(id => {
+                const input = document.getElementById(id);
+                if (input && input.placeholder) {
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Tab' && !e.shiftKey) {
+                            if (input.value.trim() === '') {
+                                input.value = input.placeholder.replace('예: ', '').replace('예시:\n', '');
+                                e.preventDefault(); // 기본 탭 동작 방지
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        // 문서 미리보기 생성 및 업데이트
+        function generateDocument() {
+            document.getElementById('outputReportPeriod').innerText = document.getElementById('reportPeriod').value || '__________';
+            document.getElementById('outputReporterName').innerText = document.getElementById('reporterName').value || '__________';
+            document.getElementById('outputReportDate').innerText = document.getElementById('reportDate').value || '__________';
+            document.getElementById('outputTeamName').innerText = document.getElementById('teamName').value || '__________';
+            document.getElementById('outputWeeklyAchievements').innerHTML = formatTextForOutput(document.getElementById('weeklyAchievements').value);
+            document.getElementById('outputNextWeekPlans').innerHTML = formatTextForOutput(document.getElementById('nextWeekPlans').value);
+            document.getElementById('outputIssuesAndNotes').innerHTML = formatTextForOutput(document.getElementById('issuesAndNotes').value);
+            document.getElementById('outputOtherComments').innerHTML = formatTextForOutput(document.getElementById('otherComments').value);
+            
+            // 현재 날짜 업데이트 (인쇄용)
+            const today = new Date();
+            document.getElementById('currentYear').innerText = today.getFullYear();
+            document.getElementById('currentMonth').innerText = (today.getMonth() + 1).toString().padStart(2, '0');
+            document.getElementById('currentDay').innerText = today.getDate().toString().padStart(2, '0');
+        }
+
+        // 텍스트 영역 내용을 HTML로 변환 (줄바꿈, 리스트 등)
+        function formatTextForOutput(text) {
+            if (!text) return '';
+            let formattedText = text.split('\n').map(line => {
+                if (line.trim().startsWith('- ')) {
+                    return `<li>${line.trim().substring(2).trim()}</li>`;
+                }
+                return `<p>${line.trim()}</p>`;
+            }).join('');
+
+            if (formattedText.includes('<li>')) {
+                formattedText = `<ul>${formattedText}</ul>`.replace(/<\/ul><ul>/g, ''); // Merge multiple ul if any
+            }
+            return formattedText;
+        }
+
+        // 초기화 및 이벤트 리스너 설정
+        document.addEventListener('DOMContentLoaded', () => {
+            setDynamicTheme();
+            loadFormDataFromLocalStorage();
+            generateDocument(); // 초기 로드 시 미리보기 생성
+            setupInputPlaceholders();
+
+            formInputs.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.addEventListener('input', () => {
+                        saveFormDataToLocalStorage();
+                        generateDocument();
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

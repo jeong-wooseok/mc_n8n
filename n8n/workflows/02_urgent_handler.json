@@ -1,0 +1,271 @@
+{
+  "name": "🚨 긴급 이메일 처리 워크플로우",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "workflow-trigger",
+      "name": "워크플로우 트리거",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 긴급 이메일 알림 메시지 생성\nconst data = $input.item(0).json;\n\nconst urgentMessage = {\n  email_info: {\n    from: data.from,\n    subject: data.subject,\n    summary: data.summary,\n    urgency_score: data.urgency_score,\n    suggested_action: data.suggested_action,\n    timestamp: data.timestamp\n  },\n  slack_message: {\n    text: `🚨 *긴급 이메일 알림* 🚨`,\n    blocks: [\n      {\n        \"type\": \"header\",\n        \"text\": {\n          \"type\": \"plain_text\",\n          \"text\": \"🚨 긴급 이메일 알림\"\n        }\n      },\n      {\n        \"type\": \"section\",\n        \"fields\": [\n          {\n            \"type\": \"mrkdwn\",\n            \"text\": `*발신자:*\\n${data.from}`\n          },\n          {\n            \"type\": \"mrkdwn\",\n            \"text\": `*긴급도:*\\n${'🔴'.repeat(data.urgency_score)} (${data.urgency_score}/5)`\n          }\n        ]\n      },\n      {\n        \"type\": \"section\",\n        \"text\": {\n          \"type\": \"mrkdwn\",\n          \"text\": `*제목:* ${data.subject}\\n*요약:* ${data.summary}\\n*권장 조치:* ${data.suggested_action}`\n        }\n      },\n      {\n        \"type\": \"actions\",\n        \"elements\": [\n          {\n            \"type\": \"button\",\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"Gmail에서 확인\"\n            },\n            \"url\": `https://mail.google.com/mail/u/0/#inbox/${data.messageId}`,\n            \"style\": \"danger\"\n          }\n        ]\n      }\n    ]\n  },\n  calendar_event: {\n    summary: `🚨 긴급 이메일 처리: ${data.summary}`,\n    description: `발신자: ${data.from}\\n제목: ${data.subject}\\n요약: ${data.summary}\\n권장 조치: ${data.suggested_action}`,\n    start: {\n      dateTime: new Date(Date.now() + 30 * 60 * 1000).toISOString() // 30분 후\n    },\n    end: {\n      dateTime: new Date(Date.now() + 60 * 60 * 1000).toISOString() // 1시간 후\n    },\n    reminders: {\n      useDefault: false,\n      overrides: [\n        { method: 'popup', minutes: 0 },\n        { method: 'email', minutes: 5 }\n      ]\n    }\n  }\n};\n\nreturn [{ json: urgentMessage }];"
+      },
+      "id": "message-formatter",
+      "name": "긴급 메시지 포맷팅",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C1234567890",
+          "mode": "list",
+          "cachedResultName": "#urgent-alerts"
+        },
+        "text": "={{ $json.slack_message.text }}",
+        "blocksUi": {
+          "blocksValues": [
+            {
+              "block": "={{ JSON.stringify($json.slack_message.blocks) }}"
+            }
+          ]
+        },
+        "otherOptions": {
+          "mrkdwn": true
+        }
+      },
+      "id": "slack-urgent-alert",
+      "name": "Slack 긴급 알림",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [680, 200],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "slack_credentials",
+          "name": "Slack OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "calendarId": "primary",
+        "summary": "={{ $json.calendar_event.summary }}",
+        "description": "={{ $json.calendar_event.description }}",
+        "start": "={{ $json.calendar_event.start.dateTime }}",
+        "end": "={{ $json.calendar_event.end.dateTime }}",
+        "additionalFields": {
+          "reminders": {
+            "reminderOptions": {
+              "useDefault": false,
+              "overrides": "={{ $json.calendar_event.reminders.overrides }}"
+            }
+          }
+        }
+      },
+      "id": "calendar-reminder",
+      "name": "캘린더 리마인더",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1,
+      "position": [680, 300],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "google_calendar_credentials",
+          "name": "Google Calendar OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.email_info.messageId }}",
+        "labelIds": ["Label_1234567890"]
+      },
+      "id": "gmail-label",
+      "name": "Gmail 긴급 라벨",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [680, 400],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail_credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "{{ $vars.MONITORING_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"alert_type\": \"urgent_email\",\n  \"timestamp\": $json.email_info.timestamp,\n  \"email_from\": $json.email_info.from,\n  \"email_subject\": $json.email_info.subject,\n  \"urgency_score\": $json.email_info.urgency_score,\n  \"summary\": $json.email_info.summary\n} }}",
+        "options": {}
+      },
+      "id": "monitoring-webhook",
+      "name": "모니터링 시스템 알림",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "extreme-urgent",
+              "leftValue": "={{ $json.email_info.urgency_score }}",
+              "rightValue": 5,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "urgency-check",
+      "name": "최고 긴급도 체크",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "accountSid": "{{ $vars.TWILIO_ACCOUNT_SID }}",
+        "fromPhoneNumber": "{{ $vars.TWILIO_PHONE_NUMBER }}",
+        "toPhoneNumber": "{{ $vars.ADMIN_PHONE_NUMBER }}",
+        "message": "🚨 최고 긴급 이메일 알림\\n\\n발신자: {{ $json.email_info.from }}\\n제목: {{ $json.email_info.subject }}\\n\\n즉시 확인이 필요합니다!"
+      },
+      "id": "sms-alert",
+      "name": "SMS 긴급 알림",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [1120, 250],
+      "credentials": {
+        "twilioApi": {
+          "id": "twilio_credentials",
+          "name": "Twilio API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "user",
+        "user": {
+          "__rl": true,
+          "value": "U1234567890",
+          "mode": "list",
+          "cachedResultName": "관리자"
+        },
+        "text": "🚨🚨🚨 *최고 긴급도 이메일 알림* 🚨🚨🚨\\n\\n발신자: {{ $json.email_info.from }}\\nGmail에서 즉시 확인하세요!\\n\\n<https://mail.google.com/mail/u/0/#inbox/{{ $json.email_info.messageId }}|이메일 바로가기>"
+      },
+      "id": "slack-dm-admin",
+      "name": "관리자 DM",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [1120, 350],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "slack_credentials",
+          "name": "Slack OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "워크플로우 트리거": {
+      "main": [
+        [
+          {
+            "node": "긴급 메시지 포맷팅",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "긴급 메시지 포맷팅": {
+      "main": [
+        [
+          {
+            "node": "Slack 긴급 알림",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "캘린더 리마인더",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gmail 긴급 라벨",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "모니터링 시스템 알림",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "캘린더 리마인더": {
+      "main": [
+        [
+          {
+            "node": "최고 긴급도 체크",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "최고 긴급도 체크": {
+      "main": [
+        [
+          {
+            "node": "SMS 긴급 알림",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "관리자 DM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2024-12-19T10:00:00.000Z",
+      "updatedAt": "2024-12-19T10:00:00.000Z",
+      "id": "email-automation",
+      "name": "이메일 자동화"
+    }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2024-12-19T10:00:00.000Z",
+  "versionId": "1"
+} 

@@ -1,0 +1,128 @@
+{
+  "name": "👤🔔 개인/알림 이메일 처리 워크플로우",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "workflow-trigger",
+      "name": "워크플로우 트리거",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "personal-category",
+              "leftValue": "={{ $json.category }}",
+              "rightValue": "personal",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "category-router",
+      "name": "카테고리 분기",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "user",
+        "user": {
+          "__rl": true,
+          "value": "U6789012345",
+          "mode": "list",
+          "cachedResultName": "개인DM"
+        },
+        "text": "👤 *개인 이메일 알림*\\n\\n*발신자:* {{ $json.from }}\\n*제목:* {{ $json.subject }}\\n*요약:* {{ $json.summary }}\\n\\n<https://mail.google.com/mail/u/0/#inbox/{{ $json.messageId }}|이메일 확인하기>"
+      },
+      "id": "personal-notification",
+      "name": "개인 알림",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [680, 200],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "slack_credentials",
+          "name": "Slack OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "🔔 *서비스 알림*\\n\\n*서비스:* {{ $json.from }}\\n*제목:* {{ $json.subject }}\\n*요약:* {{ $json.summary }}\\n\\n알림이 자동으로 정리되었습니다."
+      },
+      "id": "notification-log",
+      "name": "알림 로그",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [680, 400],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "slack_credentials",
+          "name": "Slack OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "워크플로우 트리거": {
+      "main": [
+        [
+          {
+            "node": "카테고리 분기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "카테고리 분기": {
+      "main": [
+        [
+          {
+            "node": "개인 알림",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "알림 로그",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2024-12-19T10:00:00.000Z",
+      "updatedAt": "2024-12-19T10:00:00.000Z",
+      "id": "email-automation",
+      "name": "이메일 자동화"
+    }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2024-12-19T10:00:00.000Z",
+  "versionId": "1"
+} 

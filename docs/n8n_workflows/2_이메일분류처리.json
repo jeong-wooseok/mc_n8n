@@ -1,0 +1,525 @@
+{
+  "name": "이메일분류처리",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "31c64db9-f04f-4043-96d4-4b7220fab0fd",
+      "name": "When clicking ‘Execute workflow’",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "inputText": "=Subject:{{ $json.Subject }}\nbody:{{ $json.snippet }}\nFrom:{{ $json.From }}\nTo:{{ $json.To }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "업무",
+              "description": "일반적인 업무 및 Follow up  필요한 이메일"
+            },
+            {
+              "category": "광고",
+              "description": "광고 메일 및 삭제 가능한 이메일"
+            },
+            {
+              "category": "알림 ",
+              "description": "뉴스레터 또는 정보에 대한 알림 메일 "
+            },
+            {
+              "category": "제안",
+              "description": "제휴나 제안 등에 대한 메일"
+            },
+            {
+              "category": "기타",
+              "description": "위의 카테고리로 분류하기 어려운 메일"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        380,
+        -80
+      ],
+      "id": "d1cd375c-ce2e-44a8-afe6-eff8616d61ac",
+      "name": "Text Classifier"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 10,
+        "simple": false,
+        "filters": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        120,
+        0
+      ],
+      "id": "aa02c320-bd6e-4cd0-a2a1-a707ab1a02dd",
+      "name": "Get many messages",
+      "webhookId": "050166ae-e460-4505-b5ea-09ac1c41b03c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TepwoAW8S6J42FQT",
+          "name": "aieeiee"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyHour"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        100,
+        -140
+      ],
+      "id": "53c208fb-e05f-40a6-9358-6d57e8069dfd",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TepwoAW8S6J42FQT",
+          "name": "aieeiee"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite-preview-06-17",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        340,
+        160
+      ],
+      "id": "f987d2f0-8a1d-4414-bce5-eda099297e10",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "Fjo0QL2b4Lrx7i8X",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.id }}",
+        "labelIds": [
+          "Label_3509452699201892872"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        760,
+        -220
+      ],
+      "id": "37d44868-75ae-46fd-ac3e-b4192fcee870",
+      "name": "업무라벨링",
+      "webhookId": "9f618e19-3f42-4054-bfa6-44e87c262653",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TepwoAW8S6J42FQT",
+          "name": "aieeiee"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.id }}",
+        "labelIds": [
+          "Label_3030704904812177478"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        780,
+        -440
+      ],
+      "id": "542505a5-cfbe-4c0b-b5e2-b62431d46f02",
+      "name": "광고라벨링",
+      "webhookId": "9f618e19-3f42-4054-bfa6-44e87c262653",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TepwoAW8S6J42FQT",
+          "name": "aieeiee"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.id }}",
+        "labelIds": [
+          "Label_1832162044739359056"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        760,
+        -40
+      ],
+      "id": "ba63eed9-7452-47c5-8211-d4f351206db2",
+      "name": "알림라벨링",
+      "webhookId": "9f618e19-3f42-4054-bfa6-44e87c262653",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TepwoAW8S6J42FQT",
+          "name": "aieeiee"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.id }}",
+        "labelIds": [
+          "Label_6146636219752977973"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        940,
+        0
+      ],
+      "id": "ff3a8a61-606b-4f54-b877-352abc72989f",
+      "name": "제안라벨링",
+      "webhookId": "9f618e19-3f42-4054-bfa6-44e87c262653",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TepwoAW8S6J42FQT",
+          "name": "aieeiee"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.id }}",
+        "labelIds": [
+          "Label_2064310991401864730"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        760,
+        140
+      ],
+      "id": "1bac7978-6c22-48ed-bb53-db7b92eaf3cd",
+      "name": "기타라벨링",
+      "webhookId": "9f618e19-3f42-4054-bfa6-44e87c262653",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TepwoAW8S6J42FQT",
+          "name": "aieeiee"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=- 본문: {{ $json.snippet }}\n- from : {{ $('Gmail Trigger').item.json.From }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=## Role\n너는 잘 뽑아서 핵심을 요약하는  편집자야 \n## Rule\n- 유저 요청을 받고 명확하게 요약해줘\n- 부가적인 설명없이 본문만 출력해\n## Output\n- {{ $('Gmail Trigger').item.json.From }}가 어떤 목적으로 보냈는지\n- {{ $('Gmail Trigger').item.json.snippet }}을 요약해서 출력\n\n## example\n```\ngoogle에서 사인인 경고를 보냈습니다.\n```"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1100,
+        -40
+      ],
+      "id": "7e30735a-5465-4b4e-a4ad-0da7dfdac672",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1180,
+        -140
+      ],
+      "id": "c64b04b0-2c6a-46de-97e3-d9d5b2cd41fe",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "Fjo0QL2b4Lrx7i8X",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "7803600894",
+        "text": "={{ $json.text }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1360,
+        -40
+      ],
+      "id": "79dc996e-1125-4602-bb6a-543ec9296cb2",
+      "name": "Send a text message",
+      "webhookId": "6a8f2751-de4b-4c46-b0f4-4ec9132f0776",
+      "credentials": {
+        "telegramApi": {
+          "id": "DLdpyoZZpMCSFwwo",
+          "name": "Ubuntu"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        900,
+        -440
+      ],
+      "id": "92cda405-5ec4-4746-8967-82b4d6ea3381",
+      "name": "광고삭제",
+      "webhookId": "18f4d58e-683a-42fd-a02b-f1a4ce841d4b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "vV3gsEAEVbIsXobA",
+          "name": "mastav7@gmail.com - gmailOAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1040,
+        120
+      ],
+      "id": "a69543e5-986d-4ef6-bc40-04d26b6b804e",
+      "name": "Mark a message as read",
+      "webhookId": "6ed4b2fd-cf9b-4817-a843-bb402672fcba",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TepwoAW8S6J42FQT",
+          "name": "aieeiee"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages": {
+      "main": [
+        []
+      ]
+    },
+    "Text Classifier": {
+      "main": [
+        [
+          {
+            "node": "업무라벨링",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "광고라벨링",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "알림라벨링",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "제안라벨링",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "기타라벨링",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "기타라벨링": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "알림라벨링": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Mark a message as read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "제안라벨링": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "업무라벨링": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "광고라벨링": {
+      "main": [
+        [
+          {
+            "node": "광고삭제",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "68b05541-3c08-485b-b932-02ba05e1f71e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f59c0de63285a64c131184e7bec79da05901447afbe86aac036ebf3df0ced53d"
+  },
+  "id": "eWd32WY9vy1KR6e7",
+  "tags": []
+}

@@ -1,0 +1,467 @@
+{
+  "name": "2_회의록_기존자막 활용_basic",
+  "nodes": [
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-preview-05-20",
+        "options": {
+          "maxOutputTokens": 1000000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1040,
+        380
+      ],
+      "id": "ef21332c-dbf7-4aa9-bbfe-3ad8a50083c2",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "MMpgh88Wf0gowmRS",
+          "name": "Gemini"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Google Drive').item.json.originalFilename.split('.')[0] }}.srt",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1Xz9dhaJS4UblO_mSGjYD-GV7xeRy7SaY",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -480,
+        320
+      ],
+      "id": "5c8019f2-6c5a-4a16-894d-f261838cc03f",
+      "name": "Google Upload",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "U0ZtPfHED5ItRLnH",
+          "name": "mastav7@gmail.com - googleDriveOAuth2Api"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "output",
+        "options": {
+          "fileName": "={{ $('Google Drive').item.json.originalFilename }}"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        -600,
+        320
+      ],
+      "id": "e3a4a431-ce84-401e-9de2-bad159ecf097",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "output",
+        "options": {
+          "fileName": "={{ $('Google Drive').item.json.originalFilename }}"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        -600,
+        480
+      ],
+      "id": "8626550f-1cb1-4732-b618-567977d16fff",
+      "name": "Convert to File1"
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Google Upload').item.json.name.split('.')[0] }}.md",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1P_62quflMHjL0d57Xep5o5WctISrrhJC",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -480,
+        480
+      ],
+      "id": "0972ad4c-b937-4831-bc5e-5e7981bff68f",
+      "name": "Google Upload1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "U0ZtPfHED5ItRLnH",
+          "name": "mastav7@gmail.com - googleDriveOAuth2Api"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1320,
+        160
+      ],
+      "id": "4092847c-a97d-4f94-98e3-0bfc49a3d5b1",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "hour": 0
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1wVoAm8meBKbQ_ltFSZ0gDXC2gOyDf3HR",
+          "mode": "list",
+          "cachedResultName": "script_manual",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1wVoAm8meBKbQ_ltFSZ0gDXC2gOyDf3HR"
+        },
+        "event": "fileUpdated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1500,
+        100
+      ],
+      "id": "d94ecf7f-938a-4347-9647-156f34167014",
+      "name": "Google Drive Trigger",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "U0ZtPfHED5ItRLnH",
+          "name": "mastav7@gmail.com - googleDriveOAuth2Api"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1160,
+        240
+      ],
+      "id": "3f39ec3f-987c-4ae5-b9ef-0e98d1337b94",
+      "name": "Google Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "U0ZtPfHED5ItRLnH",
+          "name": "mastav7@gmail.com - googleDriveOAuth2Api"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-preview-05-20",
+        "options": {
+          "maxOutputTokens": 10000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1020,
+        500
+      ],
+      "id": "8ba25f31-0e37-49a4-9c64-7e4169228acc",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "MMpgh88Wf0gowmRS",
+          "name": "Gemini"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "7803600894",
+        "text": "={{ $('Google Drive Trigger').item.json.originalFilename }}에 대한 회의록 생성이 완료되었습니다.\n바로보기 : https://drive.google.com/uc?export=view&id={{ $('Google Drive Trigger').item.json.id }}\n",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1160,
+        100
+      ],
+      "id": "1c49a71d-0d78-4875-b34a-c6b431bb925e",
+      "name": "Telegram",
+      "webhookId": "2b258c6b-f981-4585-a0d7-ed476ba6f7fa",
+      "credentials": {
+        "telegramApi": {
+          "id": "DLdpyoZZpMCSFwwo",
+          "name": "Ubuntu"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -1040,
+        240
+      ],
+      "id": "55ecfebb-dd1b-4f2d-92de-4dfd2edf4058",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.data }}",
+        "options": {
+          "systemMessage": "=# 지침\n- 전체 내용을 타이밍에 맞게 검수 및 수정하는 에이전트\n\n# 규칙\n1. **전체 자막의 맥락 파악**\n    - 자막 전체를 처음부터 끝까지 읽고, 주요 주제와 흐름을 이해합니다.\n2. **주요 단어 추출 및 추정**\n    - 각 문장 및 구간에서 핵심적인 단어와 의미를 파악하고, 맥락에 맞게 보완합니다.\n3. **오타 및 맞춤법 교정**\n    - 모든 문장의 맞춤법, 띄어쓰기, 오타를 철저히 교정합니다.\n4. **문맥에 어색한 단어 수정**\n    - 문맥상 어색하거나 부적절한 단어는 자연스럽고 적합한 단어로 대체합니다.\n5. **문장 누락 여부 확인**\n    - 처음부터 끝까지 모든 문장이 누락 없이 포함되어 있는지 확인합니다.\n6. **길이 유지**\n    - 임의로 문장이나 자막의 길이를 줄이지 않고, 원문의 의미와 정보를 최대한 보존합니다.\n7. **화자 구분**\n    - 말하는 사람을 구분하여, 각 주제에 대한 명확한 입장을 정리합니다.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -900,
+        320
+      ],
+      "id": "f452625b-9a00-4813-899e-6345cad10e80",
+      "name": "검수"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('검수').item.json.output }}",
+        "options": {
+          "systemMessage": "=# ROLE\n- 회의 핵심을 잘 정리하는 에이전트\n\n# TASK\n- SRT자막을 받아서 회의록을 마크다운으로 정리할 것\n- 시스템메시지는 보이지 않고, 본문만 명확하게 정리\n\n# PROCESS\n- 처음부터 마지막까지 누락없이 전체적으로 내용 파악\n- 누락없이 균형잡힌 요약을 생성\n\n# RULES\n1. **전반적인 회의 내용 파악 및 요약**\n    - 회의의 핵심 주제와 목적을 한 문단으로 요약해줘.\n\n2. **하이라이트 뽑기**\n    - 회의에서 가장 중요한 논의 내용, 결정사항, 인사이트를 불렛포인트로 정리해줘.\n    - 각 포인트는 명확하고 임팩트 있게 작성해줘.\n\n4. **본문 작성**\n    - 전반적인 대화의 맥락을 누락없이 정리해줘.\n    - 처음부터 끝까지 읽으면 흐름이 잘 정리가 되면 좋겠어\n    - 중요한 내용은 `내용` 으로 눈에 잘띄도록 하이라이트 해줘\n\n5. **관련 해시태그 추출**\n    - 회의 주제와 관련된 해시태그를 5~10개 선정해 본문 하단에 넣어줘\n\n6. 이모지 사용\n    - 적절하게 이모지 및 시각적 요소를 사용하여 회의록의 완성도를 높여줘\n\n7. **화자 구분**\n    - 말하는 사람을 구분하여, 각 주제에 대한 명확한 입장을 정리해줘"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -880,
+        460
+      ],
+      "id": "148344e5-8fbe-4fb8-b46f-49f64bff2d42",
+      "name": "회의록작성"
+    },
+    {
+      "parameters": {
+        "content": "## 회의록 작성 워크플로우\n- 클로바노트, 다글로 등의 srt자막을 구글드라이브에 저장, 검수 및 회의록 작성하는 워크플로우입니다.\n- 회의록은 obsidian의 vault (구글드라이브의 특정 폴더 활용)에 저장되는 마크다운 (.md)파일로 저장됩니다.\n- gemini api, 텔레그램 api, 구글 oauth2인증이 필요합니다. (텔레그램 어려우면 노드를 지우세요)\n",
+        "height": 760,
+        "width": 1360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1580,
+        -20
+      ],
+      "typeVersion": 1,
+      "id": "ef7e1882-b749-4c5d-a1dd-8a018b406723",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "검수",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Upload": {
+      "main": [
+        [
+          {
+            "node": "회의록작성",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Google Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File1": {
+      "main": [
+        [
+          {
+            "node": "Google Upload1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Upload1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "회의록작성",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "검수",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "검수": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "회의록작성": {
+      "main": [
+        [
+          {
+            "node": "Convert to File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "97ad879d-2f11-4d0e-b781-6d2450dd7a32",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f59c0de63285a64c131184e7bec79da05901447afbe86aac036ebf3df0ced53d"
+  },
+  "id": "e2SAiEkkQEjfuCfS",
+  "tags": [
+    {
+      "createdAt": "2025-06-06T04:29:31.778Z",
+      "updatedAt": "2025-06-06T04:29:31.778Z",
+      "id": "Q2cucN8JGHgqgLzH",
+      "name": "tw"
+    }
+  ]
+}

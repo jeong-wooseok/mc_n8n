@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[양식명] 작성 도우미 ✍️</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap'); /* 제목용 폰트 */
+        :root {
+            /* CSS 변수 기본값 설정 */
+            --accent-color: #2563EB; /* 기본 파란색 */
+            --accent-color-light: #BFDBFE;
+            --accent-color-start: #3B82F6;
+            --accent-color-end: #2563EB;
+            --header-bg-image: none; /* 기본 이미지 없음 */
+            --header-bg-position: center center;
+            --header-bg-size: 40% auto;
+            --header-bg-opacity: 0.15;
+            --header-mix-blend-mode: soft-light;
+        }
+        * {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        .material-section {
+            break-inside: avoid;
+            page-break-inside: avoid;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background-color: #ffffff; /* 섹션 배경색 */
+            border-radius: 0.75rem; /* 둥근 모서리 */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); /* 은은한 그림자 */
+        }
+        .input-group {
+            margin-bottom: 1rem;
+        }
+        .section-divider {
+            border-top: 2px solid #e5e7eb;
+            margin: 3rem 0; /* 간격 확대 */
+        }
+        .gradient-header-bg {
+            /* 양식명에 따른 테마 색상 그라디언트 (기본: blue) */
+            background: linear-gradient(135deg, var(--accent-color-start) 0%, var(--accent-color-end) 100%);
+            padding: 2.5rem; /* 패딩 증가 */
+            border-radius: 1rem; /* 더 둥근 모서리 */
+            color: white;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2); /* 텍스트 그림자 */
+            position: relative; /* ::before 가상 요소의 기준점 */
+            overflow: hidden; /* 배경 이미지가 박스 밖으로 나가지 않도록 */
+            /* 인쇄 시에도 색상 유지를 위해 */
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        /* 헤더 배경 이미지 기본 스타일 (가상 요소) */
+        .gradient-header-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: var(--header-bg-image); /* JS에서 설정된 이미지 */
+            background-repeat: no-repeat;
+            background-position: var(--header-bg-position); /* JS에서 설정된 위치 */
+            background-size: var(--header-bg-size); /* JS에서 설정된 크기 */
+            opacity: var(--header-bg-opacity); /* JS에서 설정된 투명도 */
+            z-index: 1; /* 그라디언트 위에 오도록 */
+            mix-blend-mode: var(--header-mix-blend-mode); /* JS에서 설정된 블렌딩 모드 */
+            /* 인쇄 시에도 색상 유지를 위해 */
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .gradient-header-bg h1, .gradient-header-bg p {
+            position: relative; /* 텍스트가 이미지 위에 오도록 */
+            z-index: 2;
+        }
+        .accent-border {
+            border-left: 5px solid var(--accent-color, #2563EB); /* 테마 색상 경계선 */
+            padding-left: 1rem;
+        }
+        /* H2 및 H3에 동일하게 적용될 섹션 제목 스타일 */
+        .section-heading, .document-output h2, .document-output h3 {
+            font-family: 'Playfair Display', serif !important; /* Playfair Display 폰트 강제 적용 */
+            font-weight: 700 !important; /* 굵게 강제 적용 */
+            color: #1F2937 !important; /* 진한 회색 강제 적용 */
+            display: flex; /* 아이콘과 텍스트 정렬 */
+            align-items: center;
+        }
+        .section-heading { /* input form의 h3과 output h2에 적용 */
+            border-bottom: 3px solid var(--accent-color-light); /* 테마 색상으로 밑줄 */
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .section-heading i {
+            margin-right: 0.75rem;
+            color: var(--accent-color);
+            -webkit-print-color-adjust: exact; /* 인쇄 시 색상 유지 */
+            print-color-adjust: exact;
+        }
+        /* PDF 생성 기능 관련 CSS */
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body {
+                -webkit-print-color-adjust: exact; /* Chrome, Safari */
+                print-color-adjust: exact; /* 표준 */
+                font-size: 11pt; /* 인쇄 시 글꼴 크기 약간 축소 */
+                line-height: 1.6;
+                color: #333333;
+                background-color: transparent !important; /* 배경색 투명하게 */
+            }
+            .container {
+                max-width: 100%;
+                padding: 0;
+                margin: 0;
+            }
+            .shadow-lg {
+                box-shadow: none !important; /* 전체 그림자 제거 */
+            }
+            .document-output { /* 보도자료는 Times New Roman 유지 */
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                font-family: 'Times New Roman', serif !important; /* 인쇄 시 문서 전체 폰트 */
+            }
+            /* material-section의 외곽선과 그림자를 인쇄 시에도 유지 */
+            .material-section {
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important; /* 인쇄 시에도 연한 그림자 유지 */
+                border: 1px solid #e5e7eb !important; /* 인쇄 시에도 외곽선 유지 */
+                padding: 1.5rem !important; /* 패딩 유지 */
+                margin-bottom: 1.5rem !important; /* 마진 유지 */
+                background-color: #ffffff !important; /* 배경색 유지 */
+                border-radius: 0.5rem !important; /* 둥근 모서리 유지 */
+                -webkit-print-color-adjust: exact !important; /* 중요: 배경색 유지 */
+                print-color-adjust: exact !important; /* 중요: 배경색 유지 */
+            }
+            /* h2, h3 제목의 폰트와 굵기 유지 */
+            .document-output h2, .document-output h3 {
+                font-family: 'Playfair Display', serif !important;
+                font-weight: 700 !important;
+                color: #1F2937 !important;
+            }
+            .section-heading { /* 인쇄 시 밑줄 및 마진 재조정 */
+                border-bottom: 1px solid #ddd !important; /* 인쇄 시 밑줄 얇게 */
+                padding-bottom: 0.25rem !important;
+                margin-bottom: 1rem !important;
+            }
+            /* 그라디언트 헤더 및 색상 요소의 색상 유지 */
+            .gradient-header-bg {
+                /* 변수 값을 직접 사용하며 !important 강제 */
+                background: linear-gradient(135deg, var(--accent-color-start) 0%, var(--accent-color-end) 100%) !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color: white !important;
+                padding: 1rem !important;
+                border-radius: 0.5rem !important;
+                text-shadow: none !important;
+                border: none !important;
+            }
+            .gradient-header-bg::before { /* 인쇄 시 배경 이미지도 유지 */
+                background-image: var(--header-bg-image) !important; /* 동적으로 설정된 이미지 유지 */
+                background-position: var(--header-bg-position) !important; /* 동적으로 설정된 위치 유지 */
+                background-size: var(--header-bg-size) !important; /* 동적으로 설정된 크기 유지 */
+                opacity: 0.05 !important; /* 인쇄 시 더 희미하게 */
+                mix-blend-mode: normal !important; /* 인쇄 시 블렌딩 모드 제거하여 호환성 개선 */
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .accent-border {
+                border-left-color: var(--accent-color) !important;
+                background-color: #F0F8FF !important; /* 인쇄 시에도 배경색 유지 */
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+        .print-only { display: none; } /* 기본적으로 숨김 */
+        @page {
+            size: A4;
+            margin: 1in;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <div class="text-center mb-8 no-print">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">
+                <i class="fas fa-file-alt text-blue-600 mr-3"></i> [양식명] 작성 도우미
+            </h1>
+            <p class="text-gray-600 text-lg">몇 가지 정보만 입력하면 전문적인 [양식명]이 완성됩니다</p>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="bg-white rounded-lg shadow-lg p-6 no-print">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-edit text-blue-500 mr-2"></i>
+                    정보 입력
+                </h2>
+                <form id="documentForm" class="space-y-6">
+                    <div class="border-b border-gray-200 pb-6">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-4 section-heading">
+                            <i class="fas fa-info-circle"></i> 기본 정보
+                        </h3>
+                        
+                        <div class="input-group">
+                            <label class="block text-sm font-medium text-gray-700 mb-2" for="documentTitle">[양식명] 제목*</label>
+                            <input type="text" id="documentTitle" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="예: [양식명] v1.0">
+                        </div>
+                        <div class="input-group">
+                            <label class="block text-sm font-medium text-gray-700 mb-2" for="documentVersion">버전</label>
+                            <input type="text" id="documentVersion" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="예: v1.0">
+                        </div>
+                        <div class="input-group">
+                            <label class="block text-sm font-medium text-gray-700 mb-2" for="releaseDate">날짜</label>
+                            <input type="date" id="releaseDate" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div class="border-b border-gray-200 pb-6">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-4 section-heading">
+                            <i class="fas fa-file-alt"></i> 주요 내용
+                        </h3>
+                        <textarea id="mainContent" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="여기에 주요 내용을 입력하세요. 예를 들어, 보고서의 핵심 요약이나 본문 내용을 작성합니다."></textarea>
+                    </div>
+                    
+                    <div class="flex flex-col space-y-3">
+                        <button type="submit" class="w-full bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 transition duration-300 font-semibold">
+                            <i class="fas fa-magic mr-2"></i>
+                            [양식명] 생성하기
+                        </button>
+                        <button type="button" id="saveFileButton" class="w-full bg-blue-500 text-white py-3 px-6 rounded-md hover:bg-blue-600 transition duration-300 font-semibold">
+                            <i class="fas fa-download mr-2"></i>
+                            데이터 파일로 저장
+                        </button>
+                        <label for="loadFile" class="w-full bg-gray-500 text-white py-3 px-6 rounded-md hover:bg-gray-600 transition duration-300 font-semibold text-center cursor-pointer">
+                            <i class="fas fa-upload mr-2"></i>
+                            데이터 파일 불러오기
+                            <input type="file" id="loadFile" accept=".json" class="hidden">
+                        </label>
+                        <button type="button" id="clearFormButton" class="w-full bg-gray-300 text-gray-800 py-3 px-6 rounded-md hover:bg-gray-400 transition duration-300 font-semibold">
+                            <i class="fas fa-trash-alt mr-2"></i>
+                            양식 초기화
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="bg-white rounded-lg shadow-lg p-8">
+                <div class="flex items-center justify-between mb-6 no-print">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-file-alt text-green-600 mr-2"></i>
+                        생성된 [양식명]
+                    </h2>
+                    <button onclick="window.print()" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition duration-300">
+                        <i class="fas fa-print mr-2"></i>
+                        PDF 저장
+                    </button>
+                </div>
+                <div id="documentPreview" class="document-output">
+                    <div class="text-center text-gray-500 py-12">
+                        <i class="fas fa-clipboard-list text-6xl mb-4"></i>
+                        <p class="text-lg">좌측 양식을 작성하고 "[양식명] 생성하기" 버튼을 클릭하세요</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const formId = 'documentForm'; // 폼 ID
+        const localStorageKeyPrefix = 'form_generator_'; // localStorage 키 접두사
+        // 모든 입력 필드에서 데이터를 수집하여 localStorage에 저장
+        function saveFormDataToLocalStorage() {
+            const formData = {};
+            const formElements = document.querySelectorAll(`#${formId} input, #${formId} textarea, #${formId} select`);
+            formElements.forEach(element => {
+                if (element.id) { // ID가 있는 요소만 저장
+                    formData[element.id] = element.value;
+                }
+            });
+            localStorage.setItem(localStorageKeyPrefix + formId, JSON.stringify(formData));
+            // console.log('Form data saved to localStorage');
+        }
+        // localStorage에서 데이터를 불러와 입력 필드에 채움
+        function loadFormDataFromLocalStorage() {
+            const savedData = localStorage.getItem(localStorageKeyPrefix + formId);
+            if (savedData) {
+                const formData = JSON.parse(savedData);
+                for (const id in formData) {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        // date input은 valueAsDate를 사용해야 올바르게 로드됨
+                        if (element.type === 'date') {
+                            if (formData[id]) {
+                                element.valueAsDate = new Date(formData[id]);
+                            }
+                        } else {
+                            element.value = formData[id];
+                        }
+                    }
+                }
+                // console.log('Form data loaded from localStorage');
+                // 데이터 로드 후 바로 미리보기 생성
+                generateDocument();
+            } else {
+                // 저장된 데이터가 없으면 오늘 날짜를 기본값으로 설정하고 미리보기 생성
+                const releaseDateElement = document.getElementById('releaseDate');
+                if (releaseDateElement) {
+                    const today = new Date();
+                    releaseDateElement.value = today.toISOString().slice(0,10); // YYYY-MM-DD 형식
+                }
+                generateDocument();
+            }
+        }
+        // 입력 필드 초기화 (로컬스토리지 포함)
+        function clearForm() {
+            const formElements = document.querySelectorAll(`#${formId} input, #${formId} textarea, #${formId} select`);
+            formElements.forEach(element => {
+                if (element.type === 'date') {
+                    element.value = ''; // 날짜는 빈 값으로 초기화
+                } else if (element.tagName === 'SELECT') {
+                    element.value = ''; // select 박스는 첫 번째 옵션 또는 빈 값으로
+                } else {
+                    element.value = ''; // 텍스트, textarea 등은 빈 문자열로
+                }
+            });
+            localStorage.removeItem(localStorageKeyPrefix + formId); // localStorage에서도 삭제
+            generateDocument(); // 초기화 후 미리보기 업데이트
+            // console.log('Form data cleared');
+        }
+        // 현재 양식 데이터를 JSON 파일로 다운로드
+        function downloadDataFile() {
+            const formData = {};
+            const formElements = document.querySelectorAll(`#${formId} input, #${formId} textarea, #${formId} select`);
+            formElements.forEach(element => {
+                if (element.id) {
+                    formData[element.id] = element.value;
+                }
+            });
+            const dataStr = JSON.stringify(formData, null, 2); // 보기 좋게 포맷팅
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            // 파일명에 현재 양식명과 날짜 포함
+            const formTitle = document.getElementById('documentTitle').value.replace(/[^a-zA-Z0-9가-힣_]/g, '_') || '새_양식';
+            a.download = `${formTitle}_데이터_${new Date().toISOString().slice(0,10)}.json`; 
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url); // URL 객체 해제
+        }
+        // JSON 파일을 읽어 양식에 불러오기
+        function uploadDataFile(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const loadedData = JSON.parse(e.target.result);
+                    for (const id in loadedData) {
+                        const element = document.getElementById(id);
+                        if (element) {
+                            if (element.type === 'date') {
+                                if (loadedData[id]) {
+                                    element.valueAsDate = new Date(loadedData[id]);
+                                }
+                            } else {
+                                element.value = loadedData[id];
+                            }
+                        }
+                    }
+                    saveFormDataToLocalStorage(); // 불러온 데이터도 로컬 저장소에 저장
+                    generateDocument(); // 불러온 데이터로 미리보기 업데이트
+                    alert('데이터를 성공적으로 불러왔습니다!');
+                } catch (error) {
+                    alert('파일을 읽는 중 오류가 발생했거나 유효한 JSON 파일이 아닙니다: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+            // 파일 선택 후 input 값 초기화 (동일 파일 재선택 가능하도록)
+            event.target.value = '';
+        }
+        // 문서 생성 함수
+        function generateDocument() {
+            // 입력값 수집
+            const documentTitleInput = document.getElementById('documentTitle');
+            const documentVersionInput = document.getElementById('documentVersion');
+            const mainContentInput = document.getElementById('mainContent');
+            const releaseDateInput = document.getElementById('releaseDate');
+            const documentTitle = documentTitleInput.value || documentTitleInput.placeholder || '[양식명] 제목';
+            const documentVersion = documentVersionInput.value || documentVersionInput.placeholder || '';
+            const mainContent = mainContentInput.value || mainContentInput.placeholder || '여기에 주요 내용이 표시됩니다.';
+            const releaseDate = releaseDateInput.value;
+            // CSS 변수 동적 설정 (테마 색상 및 배경 이미지)
+            const root = document.documentElement;
+            let themeColor = '#2563EB'; // 기본 테마색 (blue)
+            let themeColorLight = '#BFDBFE'; // 기본 테마색 (light blue)
+            let themeColorStart = '#3B82F6'; // 기본 그라디언트 시작 색상
+            let themeColorEnd = '#2563EB'; // 기본 그라디언트 끝 색상
+            let headerBgImage = 'none'; // 헤더 배경 이미지 URL
+            let headerBgPosition = 'center center'; // 헤더 배경 이미지 위치
+            let headerBgSize = '40% auto'; // 헤더 배경 이미지 크기
+            let headerBgOpacity = 0.15;
+            let headerMixBlendMode = 'soft-light';
+            // 양식명에 따른 테마 색상 및 배경 이미지 결정
+            if (documentTitle.includes('보도자료')) {
+                themeColor = '#3B82F6'; // Blue
+                themeColorLight = '#BFDBFE';
+                themeColorStart = '#3B82F6';
+                themeColorEnd = '#2563EB';
+                headerBgImage = "url('https://via.placeholder.com/300x150/FFD700/FFFFFF?text=News')"; /* 보도자료: 신문 아이콘 */
+                headerBgPosition = 'right 10% bottom 20%';
+                headerBgOpacity = 0.1;
+            } else if (documentTitle.includes('교육 자료') || documentTitle.includes('워크숍')) {
+                themeColor = '#4CAF50'; // Green
+                themeColorLight = '#C8E6C9';
+                themeColorStart = '#4CAF50';
+                themeColorEnd = '#388E3C';
+                headerBgImage = "url('https://via.placeholder.com/300x150/90EE90/FFFFFF?text=Edu')"; /* 교육 자료: 책 또는 학사모 아이콘 */
+                headerBgPosition = 'right -20% bottom 20%';
+                headerBgOpacity = 0.1;
+            } else if (documentTitle.includes('보고서')) {
+                themeColor = '#EF4444'; // Red
+                themeColorLight = '#FECACA';
+                themeColorStart = '#EF4444';
+                themeColorEnd = '#DC2626';
+                headerBgImage = "url('https://via.placeholder.com/300x150/FF6347/FFFFFF?text=Report')"; /* 보고서: 그래프 아이콘 */
+                headerBgPosition = 'left 20% top 10%';
+                headerBgOpacity = 0.08;
+            } else if (documentTitle.includes('프로젝트 계획서')) {
+                themeColor = '#8A2BE2'; // Purple
+                themeColorLight = '#D8BFD8';
+                themeColorStart = '#8A2BE2';
+                themeColorEnd = '#6A0DAD';
+                headerBgImage = "url('https://via.placeholder.com/300x150/8A2BE2/FFFFFF?text=Proj')"; /* 프로젝트 계획서: 작업 흐름 아이콘 */
+                headerBgPosition = 'right 5% center';
+                headerBgOpacity = 0.12;
+            }
+            // Add more else if blocks for other form types you might create
+            // Example for a generic default if no specific type matches:
+            else {
+                themeColor = '#4A5568'; // Dark Gray
+                themeColorLight = '#CBD5E0';
+                themeColorStart = '#4A5568';
+                themeColorEnd = '#2D3748';
+                headerBgImage = "url('https://via.placeholder.com/300x150/CBD5E0/FFFFFF?text=Form')"; // 기본 이미지
+                headerBgPosition = 'center center';
+                headerBgOpacity = 0.15;
+            }
+            root.style.setProperty('--accent-color', themeColor);
+            root.style.setProperty('--accent-color-light', themeColorLight);
+            root.style.setProperty('--accent-color-start', themeColorStart);
+            root.style.setProperty('--accent-color-end', themeColorEnd);
+            root.style.setProperty('--header-bg-image', headerBgImage);
+            root.style.setProperty('--header-bg-position', headerBgPosition);
+            root.style.setProperty('--header-bg-size', headerBgSize);
+            root.style.setProperty('--header-bg-opacity', headerBgOpacity);
+            root.style.setProperty('--header-mix-blend-mode', headerMixBlendMode);
+            let generatedHtml = `
+                <div class="fade-in">
+                    <div class="gradient-header-bg text-center mb-8">
+                        <h1 class="text-4xl font-bold mb-2">${documentTitle}</h1>
+                        ${documentVersion ? `<p class="text-xl opacity-90">${documentVersion}</p>` : ''}
+                        <p class="text-lg mt-4 opacity-80">[양식명]</p>
+                    </div>
+                    <div class="material-section">
+                        <h2 class="section-heading">
+                            <i class="fas fa-info-circle"></i>
+                            주요 내용
+                        </h2>
+                        ${releaseDate ? `<p class="text-sm text-gray-600 mb-4"><strong>날짜:</strong> ${new Date(releaseDate).toLocaleDateString('ko-KR')}</p>` : ''}
+                        <p class="text-gray-700 leading-relaxed">${mainContent.replace(/\n/g, '</p><p class="text-gray-700 leading-relaxed mt-2">')}</p>
+                    </div>
+                    <div class="text-center text-gray-500 text-sm mt-8 pt-4 border-t border-gray-300 print-only">
+                        <p>본 문서는 ${new Date().toLocaleDateString('ko-KR')}에 생성되었습니다.</p>
+                        <p>&copy; ${new Date().getFullYear()} [회사명] 모든 권리 보유.</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('documentPreview').innerHTML = generatedHtml;
+            // 모바일에서 미리보기로 스크롤
+            if (window.innerWidth < 1024) {
+                document.getElementById('documentPreview').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+        // placeholder 텍스트를 실제 값으로 채우는 함수
+        function setupInputPlaceholders() {
+            const inputs = document.querySelectorAll('#documentForm input[placeholder], #documentForm textarea[placeholder]');
+            inputs.forEach(input => {
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Tab' && input.value.trim() === '') {
+                        e.preventDefault(); // 기본 Tab 동작 방지
+                        input.value = input.placeholder;
+                        saveFormDataToLocalStorage(); // Tab 키로 입력 시 자동 저장
+                        generateDocument(); // Tab 키로 입력 시 미리보기 업데이트
+                    }
+                });
+            });
+        }
+        // 초기화 및 자동 저장/로드 기능 설정
+        document.addEventListener('DOMContentLoaded', function() {
+            setupInputPlaceholders(); // Tab 키 기능 설정
+            loadFormDataFromLocalStorage(); // 페이지 로드 시 localStorage에서 데이터 불러오기
+            // 모든 입력 필드에 input 이벤트 리스너 추가하여 데이터 변경 시 자동 저장
+            const formElements = document.querySelectorAll(`#${formId} input, #${formId} textarea, #${formId} select`);
+            formElements.forEach(element => {
+                element.addEventListener('input', () => {
+                    saveFormDataToLocalStorage();
+                    generateDocument(); // 입력 시 미리보기 자동 업데이트
+                });
+                element.addEventListener('change', () => { // select, date 등 변경 시
+                    saveFormDataToLocalStorage();
+                    generateDocument(); // 변경 시 미리보기 자동 업데이트
+                });
+            });
+            // 파일 저장/불러오기 버튼 이벤트 리스너
+            document.getElementById('saveFileButton').addEventListener('click', downloadDataFile);
+            document.getElementById('loadFile').addEventListener('change', uploadDataFile);
+            document.getElementById('clearFormButton').addEventListener('click', clearForm); // 양식 초기화 버튼
+            // 폼 제출 시 페이지 새로고침 방지
+            document.getElementById('documentForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                generateDocument();
+            });
+        });
+    </script>
+</body>
+</html>

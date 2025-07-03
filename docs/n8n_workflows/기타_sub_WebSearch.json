@@ -1,0 +1,191 @@
+{
+  "name": "0_2_WebSearch",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "query"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -180,
+        100
+      ],
+      "id": "804aec02-3066-48da-ae58-bc1597831d93",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        160,
+        100
+      ],
+      "id": "8375e34f-65a4-4963-ae7c-64480a6c7eba",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "items"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        300,
+        100
+      ],
+      "id": "2137e841-d2bb-49f9-8798-7af104025b5b",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/customsearch/v1",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "cx",
+              "value": "41397f8e70943489d"
+            },
+            {
+              "name": "q",
+              "value": "={{$json.query}}"
+            },
+            {
+              "name": "key",
+              "value": "AIzaSyAGjoqhyk07O9CKbHdBInHAgVGtpXSDJh4"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "0d6285fa-ce33-4fbb-97d7-f0e5fadfb179",
+      "name": "구글검색"
+    },
+    {
+      "parameters": {
+        "url": "https://openapi.naver.com/v1/search/blog",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $json.query }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Naver-Client-Id",
+              "value": "bV1zhAg8YIjZDTBE8tB8"
+            },
+            {
+              "name": "X-Naver-Client-Secret",
+              "value": "nRiJaEdFzT"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        200
+      ],
+      "id": "c278b80e-f3d2-4e43-9b25-d733897e6ebc",
+      "name": "NaverSearch"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "구글검색",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "NaverSearch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "구글검색": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NaverSearch": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "61a1d2cb-2c01-496e-a5de-2551ca3fec91",
+  "meta": {
+    "instanceId": "f59c0de63285a64c131184e7bec79da05901447afbe86aac036ebf3df0ced53d"
+  },
+  "id": "veARxAy9rnMzjT6u",
+  "tags": [
+    {
+      "createdAt": "2025-06-06T04:29:31.778Z",
+      "updatedAt": "2025-06-06T04:29:31.778Z",
+      "id": "Q2cucN8JGHgqgLzH",
+      "name": "tw"
+    }
+  ]
+}
