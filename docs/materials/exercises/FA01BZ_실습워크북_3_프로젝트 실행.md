@@ -1,296 +1,416 @@
+## 기본 챗봇 실습 가이드
+
+### 개요
+이 실습에서는 n8n을 사용하여 OpenAI GPT 모델 기반의 기본 챗봇을 구현합니다. 메모리 기능과 계산기 도구를 포함한 간단하지만 실용적인 AI 에이전트를 만들어보겠습니다.
+
+### 워크플로우 구성 요소
+
+#### 1. Chat Trigger (채팅 트리거)
+- **역할**: 사용자의 채팅 메시지를 수신하는 시작점
+- **설정**: 기본 옵션으로 설정
+- **웹훅 ID**: `d864a825-d9b6-4280-8024-b17480bfc0e7`
+
+#### 2. AI Agent (AI 에이전트)
+- **역할**: 전체 대화 흐름을 관리하는 중앙 허브
+- **기능**: 
+  - 사용자 입력 처리
+  - 적절한 도구 선택 및 실행
+  - 응답 생성 및 반환
+
+#### 3. OpenAI Chat Model (OpenAI 채팅 모델)
+- **모델**: GPT-4.1-mini
+- **역할**: 자연어 이해 및 생성
+- **연결**: AI Agent의 언어 모델로 연결
+- **필수 설정**: OpenAI API 키 인증 정보 필요
+
+#### 4. Simple Memory (간단한 메모리)
+- **타입**: Buffer Window Memory
+- **역할**: 대화 기록 저장 및 컨텍스트 유지
+- **기능**: 이전 대화 내용을 기억하여 연속적인 대화 가능
+
+#### 5. Calculator (계산기 도구)
+- **역할**: 수학적 계산 수행
+- **기능**: 사용자가 계산 요청 시 자동으로 활성화
+- **연결**: AI Agent의 도구로 연결
+
+## 2. 이메일 분류 처리 실습 가이드
+
+### 개요
+n8n을 사용하여 Gmail 이메일을 AI 기반으로 자동 분류하고 처리하는 워크플로우를 구현합니다.
+
+### 주요 구성 요소
+
+#### Gmail Trigger
+- **기능**: 새 이메일 수신 시 워크플로우 자동 시작
+- **설정**: 매시간 폴링, Gmail OAuth2 인증 필요
+
+#### Text Classifier (텍스트 분류기)
+- **역할**: 이메일 내용 분석 및 카테고리 분류
+- **분류 카테고리**:
+  - 업무: 일반 업무 및 Follow up 필요
+  - 광고: 광고 메일 및 삭제 대상
+  - 알림: 뉴스레터 및 정보 알림
+  - 제안: 제휴 및 제안 관련
+  - 기타: 기타 분류 어려운 메일
+
+#### Google Gemini Chat Model
+- **모델**: gemini-2.5-flash-lite-preview-06-17
+- **역할**: 텍스트 분류 AI 엔진
+
+#### 카테고리별 처리
+- **업무/제안/기타**: Gmail 라벨링 → 요약 생성 → 텔레그램 알림
+- **알림**: Gmail 라벨링 → 요약 생성 → 읽음 처리 → 텔레그램 알림
+- **광고**: Gmail 라벨링 → 자동 삭제
+
+#### Basic LLM Chain
+- **기능**: 이메일 요약 및 핵심 정보 추출
+- **출력**: 발신자 목적 및 내용 요약
+
+### 실행 흐름
+1. 새 이메일 수신 감지
+2. AI 기반 카테고리 분류
+3. 카테고리별 Gmail 라벨 추가
+4. 후속 처리 (삭제/읽음처리/요약생성)
+5. 중요 이메일 텔레그램 알림
+
+### 필수 설정
+- Gmail OAuth2 인증
+- Google PaLM API 키
+- Telegram API 설정
+- Gmail 라벨 사전 생성
+
+## 3. RAG PDF 문서 분석 실습 가이드
+
+### 개요
+n8n을 사용하여 Google Drive의 PDF 문서들을 Vector Database에 저장하고, AI 기반 RAG(Retrieval-Augmented Generation) 시스템을 구현하여 문서 내용에 대한 질의응답을 수행하는 워크플로우를 구현합니다.
+
+### 주요 구성 요소
+
+#### 1단계: Vector Database 저장 프로세스
+
+##### Manual Trigger
+- **기능**: 워크플로우 수동 실행 시작점
+- **역할**: PDF 문서 벡터화 프로세스 시작
+
+##### Google Drive (파일 목록 조회)
+- **기능**: 지정된 폴더의 PDF 파일 목록 조회
+- **설정**: PAPER 폴더 (ID: 13MNLhucMhOcJcTPOSA-eswiivTPvHQMm)
+- **제한**: 최대 10개 파일 처리
+
+##### Loop Over Items
+- **역할**: 여러 PDF 파일을 순차적으로 처리
+- **기능**: 배치 처리를 통한 효율적인 파일 처리
+
+##### Google Drive (파일 다운로드)
+- **기능**: 개별 PDF 파일 다운로드
+- **설정**: 파일 ID 기반 다운로드
+
+##### Default Data Loader
+- **역할**: PDF 문서 데이터 로딩
+- **기능**: 다운로드된 PDF 파일을 텍스트로 변환
+
+##### Recursive Character Text Splitter
+- **기능**: 긴 텍스트를 적절한 크기로 분할
+- **역할**: 벡터 임베딩에 최적화된 텍스트 청크 생성
+
+##### Embeddings OpenAI
+- **모델**: OpenAI 임베딩 모델
+- **역할**: 텍스트를 벡터로 변환
+
+##### Qdrant Vector Store (Insert 모드)
+- **기능**: 벡터 데이터베이스에 문서 저장
+- **컬렉션**: docs
+- **모드**: insert (새 문서 추가)
+
+#### 2단계: RAG 채팅 시스템
+
+##### Chat Trigger
+- **기능**: 채팅 메시지 수신 시 워크플로우 자동 시작
+- **웹훅 ID**: b8f4af8f-07d3-4f53-8603-d6d181882da7
+
+##### AI Agent
+- **역할**: 다국어 문서 분석 및 질의응답 AI 어시스턴트
+- **시스템 메시지 주요 기능**:
+  - 다국어 지원 (질문 언어와 동일한 언어로 답변)
+  - 벡터 스토어 참조를 통한 정확한 정보 제공
+  - 학술적 스타일의 인용 및 참고문헌 제공
+  - 컨텍스트 기반 답변 생성
+
+##### OpenAI Chat Model
+- **모델**: gpt-4o-mini
+- **역할**: 자연어 처리 및 답변 생성 엔진
+
+##### Call n8n Workflow Tool
+- **기능**: 벡터 스토어 검색을 위한 워크플로우 호출
+- **도구명**: rag_knowledge_base
+- **연결 워크플로우**: QA-chain (ID: JJaI1r2cpbHsIzKI)
+- **입력 파라미터**: query (사용자 질문)
+
+### 실행 흐름
+
+#### 문서 저장 프로세스
+1. Manual Trigger로 워크플로우 시작
+2. Google Drive에서 PAPER 폴더의 PDF 파일 목록 조회
+3. Loop Over Items로 각 파일 순차 처리
+4. 개별 PDF 파일 다운로드
+5. PDF 텍스트 추출 및 청크 분할
+6. OpenAI 임베딩으로 벡터 변환
+7. Qdrant Vector Store에 저장
+
+#### RAG 질의응답 프로세스
+1. 사용자 채팅 메시지 수신
+2. AI Agent가 질문 분석
+3. Call n8n Workflow Tool을 통해 벡터 스토어 검색
+4. 관련 문서 컨텍스트 추출
+5. GPT-4o-mini로 답변 생성
+6. 학술적 인용과 참고문헌 포함한 답변 제공
+
+### 필수 설정
+- Google Drive OAuth2 인증
+- OpenAI API 키 설정
+- Qdrant Vector Database 연결
+- Google Drive PAPER 폴더 접근 권한
+- QA-chain 워크플로우 사전 구성
+
+### 주요 특징
+- **다국어 지원**: 질문 언어에 맞춘 답변 제공
+- **학술적 인용**: 문서 제목, 페이지 번호 포함 인용
+- **정확한 정보**: 벡터 스토어 기반 사실 확인
+- **배치 처리**: 여러 PDF 파일 효율적 처리
+- **실시간 채팅**: 웹훅 기반 즉시 응답
+
+
+## 4. OpenWebUI 워크플로우 실습 가이드
+
+### 개요
+OpenWebUI와 연동하여 AI 챗봇 서비스를 구축하는 워크플로우입니다. 웹훅을 통해 외부 채팅 인터페이스와 연결하고, OpenAI GPT 모델을 활용한 대화형 AI 서비스를 제공합니다.
+
+### 워크플로우 구성 요소
+
+#### Webhook
+- **HTTP 메서드**: POST
+- **경로**: invoke
+- **응답 모드**: responseNode
+- **역할**: 외부 OpenWebUI에서 전송되는 채팅 메시지 수신
+
+#### AI Agent
+- **프롬프트 타입**: define
+- **입력 텍스트**: `{{ $json.body.chatInput }}`
+- **역할**: 사용자 입력을 처리하고 AI 응답 생성
+
+#### OpenAI Chat Model
+- **모델**: gpt-4o-mini
+- **역할**: 자연어 이해 및 응답 생성 엔진
+- **인증**: OpenAI API 키 필요
+
+#### Respond to Webhook
+- **역할**: 처리된 AI 응답을 OpenWebUI로 반환
+
+### 실행 흐름
+
+#### 채팅 처리 프로세스
+1. OpenWebUI에서 사용자가 메시지 입력
+2. Webhook이 POST 요청으로 메시지 수신
+3. AI Agent가 `chatInput` 데이터 추출 및 분석
+4. OpenAI Chat Model이 응답 생성
+5. Respond to Webhook이 결과를 OpenWebUI로 반환
+6. 사용자에게 AI 응답 표시
+
+### 설정 방법
+
+#### 1. 워크플로우 활성화
+- N8N에서 워크플로우를 활성화 상태로 설정
+- 웹훅 URL 확인 및 복사
+
+#### 2. OpenAI API 키 설정
+- OpenAI Chat Model 노드에서 인증 정보 설정
+- API 키 발급 방법은 별도 가이드 참조
+
+#### 3. OpenWebUI 연동 설정
+- OpenWebUI에서 N8N 웹훅 URL 등록
+- 채팅 인터페이스와 워크플로우 연결
+
+### 테스트 방법
+
+#### 1. 워크플로우 테스트
+- N8N에서 수동 실행으로 기본 동작 확인
+- 웹훅 URL 직접 호출하여 응답 테스트
+
+#### 2. OpenWebUI 통합 테스트
+- OpenWebUI 채팅창에서 메시지 입력
+- AI 응답 정상 수신 확인
+- 다양한 질문 유형으로 성능 테스트
+
+### 주요 특징
+- **실시간 채팅**: 웹훅 기반 즉시 응답
+- **간단한 구조**: 최소한의 노드로 구성된 효율적 워크플로우
+- **확장 가능**: 추가 도구나 기능 연결 용이
+- **외부 연동**: OpenWebUI 등 다양한 채팅 인터페이스 지원
+
+### 활용 방안
+- **개인 AI 어시스턴트**: 일상적인 질문 응답 서비스
+- **고객 지원 봇**: 기본적인 고객 문의 처리
+- **교육용 챗봇**: 학습 지원 및 질의응답
+- **프로토타입 개발**: AI 서비스 초기 모델 구축
+
+### 주의사항
+- OpenAI API 사용량에 따른 과금 발생 가능
+- 웹훅 URL 보안 관리 필요
+- 워크플로우 활성화 상태 유지 필수
+- 네트워크 연결 상태 확인 필요
+
+
+## 5. 텔레그램 멀티봇 워크플로우
+
+### 개요
+텔레그램 멀티봇은 하나의 텔레그램 봇으로 다양한 AI 기능을 제공하는 통합 워크플로우입니다. 이미지 생성, 비디오 생성, AI 어시스턴트 기능을 모두 포함하여 사용자의 다양한 요청을 처리할 수 있습니다.
+
+### 주요 기능
+1. **이미지 생성**: 텍스트 프롬프트를 기반으로 AI 이미지 생성
+2. **비디오 생성**: 이미지를 기반으로 짧은 비디오 클립 생성
+3. **AI 어시스턴트**: MCP 서버를 활용한 대화형 AI 지원
+4. **멀티 라우팅**: 사용자 입력에 따라 적절한 기능으로 자동 분기
+
+### 워크플로우 구조
+
+#### 1. 입력 처리 섹션
+- **Telegram Trigger**: 텔레그램 메시지 수신
+- **Input Router**: 사용자 입력을 분석하여 적절한 기능으로 라우팅
+
+#### 2. 비디오 생성 섹션
+- **Video Prompter**: 비디오 생성을 위한 프롬프트 최적화
+- **Image Gen for Video**: 비디오 시작 이미지 생성
+- **Video Gen**: Kling AI를 사용한 비디오 생성
+- **Video Download**: 생성된 비디오 다운로드
+- **Send Video**: 텔레그램으로 비디오 전송
+
+#### 3. 이미지 생성 섹션
+- **Image Prompter**: 이미지 생성을 위한 프롬프트 최적화
+- **Image Gen**: FLUX 모델을 사용한 이미지 생성
+- **Image Downloader**: 생성된 이미지 다운로드
+- **Send Image**: 텔레그램으로 이미지 전송
+
+#### 4. AI 어시스턴트 섹션
+- **AI Agent**: MCP 클라이언트를 활용한 대화형 AI
+- **MCP Client**: 외부 도구 및 서비스 연동
+- **Simple Memory**: 대화 컨텍스트 관리
+
+### 설정 방법
+
+#### 1. 텔레그램 봇 생성
+- BotFather를 통해 새로운 텔레그램 봇 생성
+- API 토큰 발급 및 안전하게 보관
+- 봇 이름과 설명 설정
+
+#### 2. N8N 워크플로우 설정
+- 텔레그램 멀티봇 워크플로우 임포트
+- Telegram Trigger 노드에 봇 API 토큰 설정
+- 각 AI 서비스 API 키 설정 (OpenAI, FLUX, Kling AI)
+
+#### 3. 라우팅 규칙 설정
+- Input Router에서 키워드 기반 분기 조건 설정
+- 이미지 생성: "이미지", "그림", "사진" 등
+- 비디오 생성: "비디오", "영상", "동영상" 등
+- AI 어시스턴트: 기본 대화 모드
+
+#### 4. 외부 서비스 연동
+- MCP 서버 설정 및 연결
+- 파일 저장 경로 설정
+- 웹훅 URL 확인 및 테스트
+
+### 동작 흐름
+
+#### 1. 기본 처리 흐름
+1. 사용자가 텔레그램 봇에 메시지 전송
+2. Telegram Trigger가 메시지 수신
+3. Input Router가 메시지 내용 분석
+4. 분석 결과에 따라 적절한 섹션으로 라우팅
+5. 각 섹션에서 AI 처리 수행
+6. 결과를 텔레그램으로 전송
+
+#### 2. 이미지 생성 흐름
+1. 이미지 관련 키워드 감지
+2. Image Prompter가 프롬프트 최적화
+3. FLUX 모델로 이미지 생성
+4. 생성된 이미지 다운로드
+5. 텔레그램으로 이미지 전송
+
+#### 3. 비디오 생성 흐름
+1. 비디오 관련 키워드 감지
+2. Video Prompter가 프롬프트 최적화
+3. 먼저 시작 이미지 생성
+4. Kling AI로 비디오 생성
+5. 생성된 비디오 다운로드 및 전송
+
+#### 4. AI 어시스턴트 흐름
+1. 일반 대화 메시지 감지
+2. MCP Client를 통한 외부 도구 연동
+3. AI Agent가 컨텍스트 기반 응답 생성
+4. Simple Memory로 대화 기록 관리
+5. 텍스트 응답 전송
+
+### 테스트 방법
+
+#### 1. 기본 기능 테스트
+- 텔레그램에서 봇과 대화 시작
+- 각 기능별 키워드로 테스트 메시지 전송
+- 응답 시간 및 품질 확인
+
+#### 2. 이미지 생성 테스트
+- "고양이 그림 그려줘" 등의 메시지 전송
+- 이미지 생성 및 전송 확인
+- 다양한 스타일과 주제로 테스트
+
+#### 3. 비디오 생성 테스트
+- "춤추는 로봇 비디오 만들어줘" 등의 메시지 전송
+- 비디오 생성 시간 확인 (일반적으로 2-5분 소요)
+- 비디오 품질 및 재생 확인
+
+#### 4. AI 어시스턴트 테스트
+- 일반적인 질문으로 대화 테스트
+- 연속 대화에서 컨텍스트 유지 확인
+- MCP 도구 활용 기능 테스트
+
+### 주요 특징
+- **올인원 솔루션**: 하나의 봇으로 다양한 AI 기능 제공
+- **지능형 라우팅**: 사용자 의도에 따른 자동 기능 분기
+- **확장 가능성**: 새로운 AI 기능 추가 용이
+- **사용자 친화적**: 텔레그램 인터페이스로 쉬운 접근
+
+### 활용 방안
+- **개인 AI 비서**: 일상적인 창작 및 업무 지원
+- **크리에이티브 도구**: 콘텐츠 제작자를 위한 통합 솔루션
+- **교육용 봇**: 학습자를 위한 멀티미디어 지원
+- **팀 협업 도구**: 팀 채팅방에서 AI 기능 활용
+
+### 주의사항
+- **API 사용량 관리**: 각 AI 서비스의 사용량 및 비용 모니터링
+- **처리 시간**: 비디오 생성은 상당한 시간이 소요될 수 있음
+- **파일 크기 제한**: 텔레그램의 파일 크기 제한 고려
+- **봇 토큰 보안**: API 토큰의 안전한 관리 필수
+- **서버 안정성**: 24시간 운영을 위한 서버 환경 구축
+
+### 문제 해결
+
+#### 1. 봇이 응답하지 않는 경우
+- 워크플로우 활성화 상태 확인
+- API 토큰 유효성 검증
+- 네트워크 연결 상태 점검
+
+#### 2. 이미지/비디오 생성 실패
+- AI 서비스 API 키 확인
+- 프롬프트 내용 검토 (부적절한 내용 필터링)
+- 서비스 상태 및 할당량 확인
+
+#### 3. 라우팅 오류
+- Input Router의 조건 설정 재검토
+- 키워드 매칭 규칙 조정
+- 기본 경로 설정 확인
+
+이 텔레그램 멀티봇 워크플로우를 통해 사용자는 하나의 인터페이스에서 다양한 AI 기능을 편리하게 활용할 수 있으며, 개인용부터 비즈니스용까지 폭넓은 활용이 가능합니다.
 
----
-
-## 📄 프로젝트 1 - 기본 챗봇 만들기
-
-### 🎯 목표: n8n으로 OpenAI API 연동 챗봇 구현
-### ✅ Step 1: 새 워크플로우 생성
-1. n8n 화면에서 "+" 버튼 클릭
-2. "Add first step" 클릭
-3. "Chat Trigger" 선택
-
-### ✅ Step 2: Chat Trigger 설정
-**Chat Trigger 노드 설정:**
-- Make Chat Publicly Available: 활성화
-- Mode: Hosted Chat
-- Authentication: None
-- 나머지는 기본값 유지
-
-### ✅ Step 3: AI Agent 노드 추가
-1. "+" 버튼으로 노드 추가
-2. "AI Agent" 검색 후 선택
-3. Chat Trigger와 AI Agent를 연결
-
-### ✅ Step 4: Chat Model 연결
-**AI Agent 노드에서:**
-1. "+ Chat Model" 버튼 클릭
-2. "OpenAI Chat Model" 선택
-3. Credential 설정:
-   - "Create New" 클릭
-   - API Key에 준비한 OpenAI 키 입력
-   - 연결 테스트 후 저장
-
-### ✅ Step 5: 계산기 도구 추가
-**AI Agent에 Tool 연결:**
-1. AI Agent 노드에서 "+ Tool" 버튼 클릭
-2. "Calulator Tool" 선택
-
-**테스트 방법:**
-✅  n8n에서 직접 입력합니다.
-✅ Live 상태에서 웹훅 주소에서 chat을 입력합니다.
-✅ 웹훅주소의 chat 디자인을 변경합니다.
-
-> 기본적인 AI Agents를 만들어 봤습니다. Output Parsor 기능 및 기타 Agents 노드도 익숙해지도록 하나씩 열어서 확인해보겠습니다. 
-
----
-
-## 📄프로젝트 2 - 이메일 자동분류봇
-
-### 🎯 목표: Gmail 연동하여 수신 메일 자동 분류 및 알림
-
-### ✅ Step 1: Gmail API 설정 (중요!)
-**Google Cloud Console 설정:**
-1. https://console.cloud.google.com 접속
-2. 새 프로젝트 생성 (이름: AI-Agent-Project)
-3. "APIs & Services" → "Enable APIs"
-4. "Gmail API" 검색 후 활성화
-
-**OAuth 2.0 설정:**
-1. "Credentials" → "Create Credentials" → "OAuth 2.0 Client IDs"
-2. Application type: "Desktop application"
-3. Name: "n8n Gmail Bot"
-4. Client ID와 Client Secret 저장
-
-### ✅ Step 2: n8n에서 Gmail 연동
-1. 새 워크플로우 생성 (이름: Email_Classifier)
-2. "Gmail Trigger" 노드 추가
-3. Trigger on: `Email Received`
-
-**Credential 설정:**
-1. "Create New" → "Google OAuth2 API"
-2. Client ID와 Secret 입력
-3. 인증 프로세스 완료 (구글 로그인)
-
-### ✅ Step 3: AI 분류 로직 구성
-**OpenAI 노드 추가:**
-- Model: `gpt-4.1-nano`
-- 프롬프트:
-```
-이메일을 다음 4개 카테고리로 분류해주세요:
-1. 업무 - 회사, 일, 비즈니스 관련
-2. 개인 - 가족, 친구, 개인적 내용  
-3. 광고 - 마케팅, 프로모션, 쇼핑
-4. 긴급 - 즉시 확인이 필요한 중요한 내용
-
-결과는 정확히 이 JSON 형식으로만 응답하세요:
-{"category": "업무", "priority": 8, "summary": "회의 일정 관련"}
-
-분류할 이메일:
-제목: {{ $json.subject }}
-발신자: {{ $json.from }}
-내용: {{ $json.bodyPlainText }}
-```
-
-### ✅ Step 4: 분류 결과 처리
-**IF 노드 추가:**
-1. "IF" 노드로 조건 분기
-2. Condition: `{{ $json.category }} = "긴급"`
-
-**텔레그램 알림 (긴급 메일용):**
-1. "Telegram" 노드 추가
-2. 봇 토큰 설정
-3. 메시지 템플릿:
-```
-🚨 긴급 메일 도착!
-
-📧 발신자: {{ $json.from }}
-📝 제목: {{ $json.subject }}
-⭐ 중요도: {{ $json.priority }}/10
-📄 요약: {{ $json.summary }}
-```
-
-### ✅ Step 5: Gmail 라벨 자동 적용
-**Gmail 노드 추가:**
-1. Operation: `Add Label`
-2. Message ID: `{{ $json.id }}`
-3. Labels: `AI-{{ $json.category }}`
-
-**워크플로우 구조:**
-```
-Gmail Trigger → OpenAI 분류 → IF 조건 
-                                ├─ 긴급: 텔레그램 알림
-                                └─ 일반: Gmail 라벨만
-```
-
----
-
-## 📄 프로젝트 3 - RAG 문서 챗봇
-
-### 🎯 목표: Google Drive 문서 기반 QA 시스템 구축
-
-### ✅ Step 1: Google Drive API 활성화
-**Google Cloud Console:**
-1. "Drive API" 검색 후 활성화
-2. "Service Account" 생성
-3. JSON 키 파일 다운로드
-
-### ✅ Step 2: 문서 수집 워크플로우
-**새 워크플로우 생성:** `Document_RAG`
-
-**Schedule Trigger 설정:**
-- Trigger Interval: `Every Hour`
-- 문서 업데이트 주기적 확인
-
-**Google Drive 노드:**
-1. Operation: `List`
-2. Folder ID: 본인 Google Drive 폴더
-3. File Types: `.pdf, .docx, .txt`
-
-### ✅ Step 3: 문서 처리 파이프라인
-**Text Extraction:**
-- PDF: `PDF Extract` 노드
-- Word: `Microsoft Word` 노드  
-- 일반 텍스트: `Read File` 노드
-
-**Text Chunking:**
-```javascript
-// 텍스트 분할 로직
-const text = $json.content;
-const chunkSize = 1000;
-const overlap = 200;
-const chunks = [];
-
-for (let i = 0; i < text.length; i += chunkSize - overlap) {
-  chunks.push(text.slice(i, i + chunkSize));
-}
-
-return chunks.map(chunk => ({ text: chunk }));
-```
-
-### ✅ Step 4: 검색 및 답변 워크플로우
-**Webhook Trigger:**
-- Path: `ask`
-- Method: `POST`
-
-**벡터 검색 시뮬레이션:**
-```javascript
-// 간단한 키워드 검색
-const question = $json.question;
-const documents = $json.documents; // 사전 수집 문서들
-const keywords = question.split(' ');
-
-const relevantDocs = documents.filter(doc => 
-  keywords.some(keyword => 
-    doc.content.includes(keyword)
-  )
-);
-
-return relevantDocs.slice(0, 3); // 상위 3개 문서
-```
-
-**답변 생성:**
-```
-다음 문서들을 참고하여 질문에 정확하게 답변해주세요.
-문서에 없는 내용은 "해당 정보를 찾을 수 없습니다"라고 답변하세요.
-
-참고 문서:
-{{ $json.documents }}
-
-질문: {{ $json.question }}
-
-답변 형식:
-- 답변 내용
-- 출처: [문서명]
-```
-
----
-
-
-
-### 🚀 성능 최적화 팁
-
-**1. API 비용 절약:**
-- 토큰 수 제한: `max_tokens: 150`
-- 모델 선택: 간단한 작업은 `gpt-4.1-mini`
-- 캐싱: 중복 질문 결과 저장
-
-**2. 오류 처리:**
-```javascript
-// Error 노드에서 사용
-try {
-  // 메인 로직
-  return $json;
-} catch (error) {
-  return {
-    error: true,
-    message: "처리 중 오류가 발생했습니다.",
-    details: error.message
-  };
-}
-```
-
-**3. 모니터링 대시보드:**
-- Google Sheets로 사용 로그 기록
-- 일일/주간 사용량 통계
-- 에러 발생률 추적
-
-### 🔧 문제 해결 가이드
-
-**자주 발생하는 문제들:**
-
-**1. Docker 실행 오류**
-```bash
-# 포트 충돌 해결
-docker-compose down
-netstat -ano | findstr :5678
-# 해당 프로세스 종료 후 재시작
-```
-
-**2. OpenAI API 오류**
-- 401 Unauthorized: API 키 확인
-- 429 Rate Limit: 잠시 대기 후 재시도
-- 400 Bad Request: 프롬프트 형식 확인
-
-**3. Gmail API 인증 실패**
-- OAuth 스코프 권한 재확인
-- Google 계정 2단계 인증 설정
-- API 할당량 초과 여부 확인
-
-### 🎯 실습 체크리스트
-
-**완성해야 할 4개 프로젝트:**
-- [ ] 기본 챗봇 (웹훅 응답 정상)
-- [ ] 이메일 분류봇 (Gmail 연동 + 분류)
-- [ ] RAG 문서봇 (Drive 연동 + QA)
-- [ ] 스케줄 봇 (캘린더 연동)
-
-**최종 확인사항:**
-- [ ] 모든 워크플로우 정상 실행
-- [ ] API 연결 상태 양호
-- [ ] 텔레그램 알림 수신 확인
-- [ ] 실제 업무 적용 계획 수립
-
-### 📚 추가 학습 리소스
-
-**공식 문서:**
-- n8n 문서: https://docs.n8n.io
-- OpenAI API: https://platform.openai.com/docs
-- Google APIs: https://developers.google.com
-
----
-
-## 🎉 수고하셨습니다!
-
-**오늘 성취한 것들:**
-✅ Docker 기반 AI 개발환경 구축  
-✅ n8n으로 시각적 워크플로우 작성  
-✅ OpenAI API 연동 챗봇 개발  
-✅ Gmail, Calendar, Telegram 연동  
-✅ 실무 적용 가능한 4개 Agent 완성  
-
-**연락처:**
-- 이메일: instructor@aiagent.com
-- GitHub: github.com/aiagent-course
-- 카톡방: [QR코드 또는 링크]
-
-**Keep Learning, Keep Building! 🚀** 
+
+
+
+
+
