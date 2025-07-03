@@ -67,7 +67,7 @@
             },
             {
               "name": "key",
-              "value": "AIzaSyAGjoqhyk07O9CKbHdBInHAgVGtpXSDJh4"
+              "value": "{$GEMINI_API_KEY}"
             }
           ]
         },
