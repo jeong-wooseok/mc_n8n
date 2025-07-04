@@ -148,7 +148,9 @@ n8n에서 Google 서비스와 연동하기 위한 credential 인증 방법을 �
 - [Google Cloud Console](https://console.cloud.google.com/)
 
 ---
-
+```
+https://github.com/x1xhlol/system-prompts-and-models-of-ai-tools
+```
 **📅 작성일**: 2025년 7월 2일
 **🔄 최종 업데이트**: 2025년 7월 2일
 **📝 작성자**: 일하는 ai
