@@ -76,3 +76,41 @@
 
 [^10]: https://apidog.com/kr/blog/beginners-guide-to-telegram-bot-api-2/
 
+# 텔레그램 봇 웹훅 설정 방법
+
+## 웹훅 설정 프로세스
+
+**기본 개념**
+웹훅은 텔레그램 봇이 봇 API를 수동으로 폴링하는 대신 자동으로 업데이트를 받을 수 있게 해줍니다.
+
+**설정 방법**
+웹훅을 설정하려면, 다음 URL 형식을 사용하여 GET 요청을 합니다:
+```
+https://api.telegram.org/bot{my_bot_token}/setWebhook?url={ngrok웹훅주소}
+```
+Where:
+- 내_봇_토큰`: BotFather의 봇 토큰
+- `url_to_send_updates_to`: 봇 업데이트를 처리하는 HTTPS 엔드포인트
+
+
+**검증**
+웹훅 설정을 확인하려면 다음을 사용합니다:
+```
+https://api.telegram.org/bot{my_bot_token}/getWebhookInfo
+
+
+```
+
+성공적인 응답은 다음과 같습니다:
+```json
+{
+ “ok": true,
+ “결과": {
+   “url": “https://www.example.com/my-telegram-bot/”,
+   “has_custom_certificate": false,
+   “pending_update_count": 0,
+   “max_connections": 40
+ }
+}
+```
+
