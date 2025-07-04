@@ -4,8 +4,8 @@
 1. **OpenAI 공식 사이트 접속**
     - [https://platform.openai.com/](https://platform.openai.com/)에 접속합니다.
       ```
-https://platform.openai.com/api-keys
-    ```
+      https://platform.openai.com/api-keys
+      ```
 2. **회원가입 또는 로그인**
     - 계정이 없다면 회원가입(Sign Up), 이미 있다면 로그인(Log In)합니다[^1_1][^1_2].
 3. **결제 정보 등록(필요 시)**
