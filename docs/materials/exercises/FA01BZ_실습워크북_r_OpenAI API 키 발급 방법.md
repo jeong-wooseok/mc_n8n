@@ -18,6 +18,11 @@
 5. **API 키 사용**
     - 발급받은 키는 환경 변수, .env 파일, 또는 코드 내에 입력하여 사용할 수 있습니다.
     - 예시: `.env` 파일에 `OPENAI_API_KEY=발급받은_키` 형태로 저장[^1_1][^1_2].
+## AI STUDIO
+```
+https://aistudio.google.com/
+```
+
 
 ## Replicate API 키(토큰) 발급 방법
 
