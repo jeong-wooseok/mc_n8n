@@ -78,7 +78,10 @@ n8n에서 Google 서비스와 연동하기 위한 credential 인증 방법을 �
   > 귀찮아서 애플리케이션 이름은 n8n이라 설정
 5. **Authorized redirect URIs 설정**:
    - n8n credential에서 **OAuth Redirect URL** 복사
-   - Self-hosted n8n instances의 경우: `http://localhost:5678/rest/oauth2-credential/callback`
+   - Self-hosted n8n instances의 경우:
+     ```
+     http://localhost:5678/rest/oauth2-credential/callback
+     ```
    - Google Console의 **Authorized redirect URIs**에 붙여넣기
      ![OAuth 클라이언트 자격 증명](../img/ex_2_14.png)
   > 구글 인증에 접속할 도메인을 모두 넣습니다. 만들기 후 생성까지 5분 소요
