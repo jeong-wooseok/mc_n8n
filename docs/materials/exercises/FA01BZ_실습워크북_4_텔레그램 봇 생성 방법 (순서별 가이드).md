@@ -46,6 +46,17 @@
 - 예시 라이브러리: `python-telegram-bot`, `telepot` 등
 - 기본적인 메시지 전송, 자동응답, 알림 기능 등을 구현할 수 있습니다[^1][^5].
 
+## 문제해결
+- 챗ID가 오류가 나는 등 문제가 발생할 경우, 웹훅 설정을 확인하려면 다음과 같이 입력합니다.
+```
+https://api.telegram.org/bot{my_bot_token}/getWebhookInfo
+```
+- 웹훅을 설정하려면, 다음 URL 형식을 사용하여 GET 요청을 합니다:
+```
+https://api.telegram.org/bot{my_bot_token}/setWebhook?url={내 웹훅주소}
+```
+- localhost의 경우 ngrok등을 활용하여 고정된 주소로 웹훅을 지정하세요
+
 
 #### 참고
 
